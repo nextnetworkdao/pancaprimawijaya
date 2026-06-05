@@ -917,10 +917,71 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    // Express 4 wildcard catch-all for SPA routing
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.use(express.static(distPath, { index: false })); // Disable default index.html serving
+    
+    // Express 4 wildcard catch-all for SPA routing with SEO Injection
+    app.get('*', async (req, res) => {
+      try {
+        let html = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        let title = 'PT Panca Prima Wijaya | Pest Control & Sensor Monitoring';
+        let description = 'Menyediakan layanan pest control, fumigasi profesional dan solusi sensor monitoring system terbaik di Indonesia.';
+        let image = 'https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png';
+
+        // Detect route and fetch data
+        if (req.path.includes('/blog/')) {
+          const slug = req.path.split('/').pop();
+          if (slug) {
+            const { rows } = await pool.query('SELECT * FROM posts WHERE slug = $1', [slug]);
+            if (rows.length > 0) {
+              title = rows[0].seotitle || rows[0].title;
+              description = rows[0].seodescription || rows[0].content?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+              image = rows[0].ogimage || rows[0].featuredimage || image;
+            }
+          }
+        } else if (req.path.includes('/produk/')) {
+          const slug = req.path.split('/').pop();
+          if (slug) {
+            const { rows } = await pool.query('SELECT * FROM products WHERE slug = $1', [slug]);
+            if (rows.length > 0) {
+              title = rows[0].seotitle || rows[0].name;
+              description = rows[0].seodescription || rows[0].description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+              image = rows[0].image || image;
+            }
+          }
+        } else {
+          // Try page
+          let slug = req.path.split('/').filter(Boolean).pop() || '';
+          if (slug) {
+            const { rows } = await pool.query('SELECT * FROM pages WHERE slug = $1', [slug]);
+            if (rows.length > 0) {
+              title = rows[0].seotitle || rows[0].title;
+              description = rows[0].seodescription || rows[0].content?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+              image = rows[0].ogimage || rows[0].image || image;
+            }
+          }
+        }
+
+        // Clean string from possible issues
+        description = description.replace(/"/g, '&quot;');
+
+        html = html.replace(/<title>(.*?)<\/title>/, `<title>${title}</title>`);
+        const metaTags = `
+          <meta name="description" content="${description}" />
+          <meta property="og:title" content="${title}" />
+          <meta property="og:description" content="${description}" />
+          <meta property="og:image" content="${image}" />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content="${title}" />
+          <meta name="twitter:description" content="${description}" />
+          <meta name="twitter:image" content="${image}" />
+        `;
+        html = html.replace('</head>', `${metaTags}</head>`);
+        
+        res.send(html);
+      } catch (e) {
+        // Fallback
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
     });
   }
 
