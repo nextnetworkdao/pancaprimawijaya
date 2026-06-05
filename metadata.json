@@ -1,0 +1,6 @@
+{
+  "name": "Panca Prima Wijaya CMS & E-Commerce",
+  "description": "Website company profile, e-commerce, dan CMS untuk PT Panca Prima Wijaya. Integrasi layanan EWS, fumigasi, dan SEO mandiri.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
