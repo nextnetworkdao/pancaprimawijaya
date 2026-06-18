@@ -1,0 +1,38 @@
+# PT Panca Prima Wijaya - Crop Protection, Fumigation & IoT Monitoring Systems
+
+PT Panca Prima Wijaya is Indonesia's leading agricultural crop protection and warehousing solution provider. We specialize in post-harvest grain protection, high-efficiency warehouse sanitation, professional fumigation services, and state-of-the-art technological warning systems (IoT, BMS, EWS, RTMS).
+
+## Key Offerings & Services
+
+- **Agricultural Crop Protection**: Premium formulations including FUMIPHOS® phosphine fumigant, SILOGUD® 250 EC warehouse insecticide, and premium agricultural pest management tools.
+- **Fumigation & Warehouse Sanitation**: Professional fumigation services for agricultural commodities, shipping containers, and large-scale cargo vessel sanitation.
+- **Precision IoT Monitoring & Core Warning Automation**:
+  - **Early Warning System (EWS)**: Dynamic real-time sensing of warehouse environment indicators.
+  - **Real Time Monitoring System (RTMS)**: Active status telemetry for critical process validation.
+  - **Building Management System (BMS)**: Smart facilities administration, HVAC optimization, and electrical monitoring.
+  - **Toyo Elevator Automation**: Advanced components, heavy industrial lifts, and spare part integrations.
+
+## Navigation & Core Resources
+
+### Indonesian Language Path
+- [Beranda Panca Prima Wijaya](/panca) - Crop protection and post-harvest information.
+- [Katalog Produk & E-Commerce](/panca/produk) - View and purchase pest control and fumigation products.
+- [Layanan Fumigasi Profesional](/layanan) - Safe port and warehouse sanitations.
+- [Sistem Sensor IoT & Monitoring](/sensor) - Dynamic smart control solutions dashboard.
+- [Katalog Produk Sensor](/sensor/produk) - Smart sensors, industrial spare parts, and Toyo systems.
+- [Artikel Edukasi & Blog](/blog) - In-depth articles regarding crop protection and pest containment.
+- [Tentang Kami](/tentang-kami) - Corporate profile, vision, and accreditation details.
+
+### English Language Path
+- [English Home](/en/panca)
+- [English Product Catalog](/en/panca/produk)
+- [English Fumigation Services](/en/layanan)
+- [English Sensor & IoT Systems](/en/sensor)
+- [English Sensor Catalog](/en/sensor/produk)
+- [English Blog](/en/blog)
+- [English About Us](/en/tentang-kami)
+
+## Technical Reference & Documentation
+- [Dynamic XML Sitemap](/sitemap.xml) - Core sitemap index for search crawlers.
+- [Panca Sitemap](/panca-sitemap.xml) - Complete Indonesian/English URL structure for agricultural and corporate pages.
+- [Sensor Sitemap](/sensor-sitemap.xml) - Complete Indonesian/English URL structure for IoT, BMS, EWS, and sensor nodes.

@@ -1530,6 +1530,11 @@ Sitemap: ${baseUrl}/sitemap.xml
 `);
   });
 
+  // Serve llms.txt containing structured AI agent markdown directly
+  app.get('/llms.txt', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'public/llms.txt'));
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

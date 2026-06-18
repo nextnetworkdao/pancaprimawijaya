@@ -76,7 +76,7 @@ export function PublicLayout() {
                   <span>{isEn ? 'English' : 'Bahasa'}</span>
                 </button>
 
-                <Link to={langLink('/cart')} className="relative p-2 text-gray-600 hover:text-blue-700 transition">
+                <Link to={langLink('/cart')} className="relative p-2 text-gray-600 hover:text-blue-700 transition" aria-label={isEn ? "Shopping Cart" : "Keranjang Belanja"}>
                   <ShoppingCart className="h-6 w-6" />
                   {getTotalItemsBySite('sensor') > 0 && (
                     <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
@@ -87,6 +87,7 @@ export function PublicLayout() {
                 <button 
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
                   className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-md"
+                  aria-label={isEn ? "Toggle Menu" : "Menu Utama"}
                 >
                   {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 </button>
@@ -233,7 +234,7 @@ export function PublicLayout() {
                 <span>{isEn ? 'English' : 'Bahasa'}</span>
               </button>
 
-              <Link to={langLink('/cart')} className="relative p-2 text-gray-600 hover:text-blue-700 transition">
+              <Link to={langLink('/cart')} className="relative p-2 text-gray-600 hover:text-blue-700 transition" aria-label={isEn ? "Shopping Cart" : "Keranjang Belanja"}>
                 <ShoppingCart className="h-6 w-6" />
                 {getTotalItemsBySite('panca') > 0 && (
                   <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
@@ -244,6 +245,7 @@ export function PublicLayout() {
               <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
                 className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-md"
+                aria-label={isEn ? "Toggle Menu" : "Menu Utama"}
               >
                 {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>

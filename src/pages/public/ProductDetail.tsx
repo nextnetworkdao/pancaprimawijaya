@@ -135,11 +135,11 @@ export default function ProductDetail() {
             </Link>
           </div>
 
-          <div className="bg-white rounded-sm shadow-sm flex flex-col mb-6 overflow-hidden border border-gray-200">
+           <div className="bg-white rounded-sm shadow-sm flex flex-col mb-6 overflow-hidden border border-gray-200">
             {/* Product Image */}
             <div className="w-full p-4 flex-shrink-0">
                <div className="relative pt-[100%] bg-gray-100 rounded-sm overflow-hidden border border-gray-100 mb-4">
-                  <img src={activeImage || translatedProduct.image || undefined} alt={`${translatedProduct.seoTitle || translatedProduct.name} - ${isEn ? 'Fumigation & Port Sanitation services PT Panca Prima Wijaya' : 'Jasa Fumigasi & Sanitasi Gudang Pangan PT Panca Prima Wijaya'}`} className="absolute inset-0 w-full h-full object-cover transition-all" loading="eager" />
+                  <img src={activeImage || translatedProduct.image || undefined} alt={`${translatedProduct.keywords || translatedProduct.seoTitle || translatedProduct.name} - ${isEn ? 'Fumigation & Port Sanitation services PT Panca Prima Wijaya' : 'Jasa Fumigasi & Sanitasi Gudang Pangan PT Panca Prima Wijaya'}`} className="absolute inset-0 w-full h-full object-cover transition-all" loading="eager" />
                </div>
                {allImages.length > 1 && (
                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -149,7 +149,7 @@ export default function ProductDetail() {
                        onClick={() => setActiveImage(img)}
                        className={`relative w-20 h-20 flex-shrink-0 rounded-sm border-2 overflow-hidden transition-colors ${activeImage === img ? themeBorder : 'border-transparent'} hover:${themeBorder}`}
                      >
-                       <img src={img || undefined} alt={`${translatedProduct.name} Detail ${i + 1} - PT Panca Prima Wijaya`} className="w-full h-full object-cover" loading="lazy" />
+                       <img src={img || undefined} alt={`${translatedProduct.keywords || translatedProduct.name} Detail ${i + 1} - PT Panca Prima Wijaya`} className="w-full h-full object-cover" loading="lazy" />
                        {activeImage !== img && <div className="absolute inset-0 bg-white/20 hover:bg-transparent transition-colors" />}
                      </button>
                    ))}

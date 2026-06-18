@@ -302,7 +302,7 @@ export default function Catalog() {
                       <div className="aspect-square bg-slate-50 rounded-lg overflow-hidden flex items-center justify-center p-2 mb-2">
                         <img 
                           src={prod.image || undefined} 
-                          alt={prod.name} 
+                          alt={prod.keywords || prod.name} 
                           className="w-full h-full object-contain group-hover:scale-105 transition-transform"
                         />
                       </div>
@@ -384,7 +384,7 @@ export default function Catalog() {
                       <div className="aspect-square bg-slate-50 rounded-xl overflow-hidden mb-3 p-2 flex items-center justify-center">
                         <img 
                           src={prod.image || undefined} 
-                          alt={prod.name} 
+                          alt={prod.keywords || prod.name} 
                           className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>

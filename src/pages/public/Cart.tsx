@@ -79,7 +79,7 @@ export default function Cart() {
           <div className="space-y-4">
              {siteItems.map(({ product, quantity }) => (
               <div key={product.id} className="flex gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                <img src={product.image || undefined} alt={product.name} className="w-16 h-16 object-cover rounded-xl bg-gray-50 border p-1" />
+                <img src={product.image || undefined} alt={product.keywords || product.name} className="w-16 h-16 object-cover rounded-xl bg-gray-50 border p-1" />
                  <div className="flex-1 flex flex-col justify-between">
                    <div>
                      <h3 className="font-extrabold text-[#0a2558] text-sm line-clamp-1">{product.name}</h3>
