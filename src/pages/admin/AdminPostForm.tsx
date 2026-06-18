@@ -5,7 +5,7 @@ import {
   ImagePlus, Bold, Italic, List, ListOrdered, 
   Quote, AlignLeft, AlignCenter, AlignRight, Link2, ExternalLink,
   MoreHorizontal, ChevronDown, Strikethrough, Underline, Baseline,
-  Heading1, Heading2, Heading3, Heading4, Table, Type
+  Heading1, Heading2, Heading3, Heading4, Table, Type, Sparkles, Loader2
 } from 'lucide-react';
 import { Post } from '../../types';
 import { PromptModal } from '../../components/PromptModal';
@@ -50,6 +50,65 @@ export default function AdminPostForm() {
         currentCats = currentCats.filter(c => c !== cat);
     }
     setFormData({ ...formData, category: currentCats.join(', ') });
+  };
+
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiKeyword, setAiKeyword] = useState('');
+  const [aiCompanyName, setAiCompanyName] = useState('PT Panca Prima Wijaya');
+  const [aiWhatsappUrl, setAiWhatsappUrl] = useState('https://wa.me/628111234567');
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const handleGenerateAI = async () => {
+    if (!aiKeyword.trim()) {
+      setAiError('Mohon isi kata kunci utama.');
+      return;
+    }
+    setGeneratingAI(true);
+    setAiError('');
+
+    try {
+      const response = await fetch('/api/posts/generate-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keyword: aiKeyword,
+          companyName: aiCompanyName,
+          whatsappUrl: aiWhatsappUrl
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Gagal membuat artikel dengan AI.');
+      }
+
+      const data = await response.json();
+      
+      // Populate fields automatically
+      setFormData(prev => ({
+        ...prev,
+        title: data.title || prev.title,
+        seoTitle: data.seoTitle || prev.seoTitle,
+        seoDescription: data.seoDescription || prev.seoDescription,
+        slug: data.slug || prev.slug,
+        keywords: data.keywords || prev.keywords,
+        content: data.fullContent || prev.content
+      }));
+
+      // Directly update the visual editor if present
+      if (visualEditorRef.current) {
+        visualEditorRef.current.innerHTML = data.fullContent || '';
+      }
+
+      setShowAIModal(false);
+      setAiKeyword('');
+    } catch (err: any) {
+      console.error(err);
+      setAiError(err.message || 'Gagal tersambung ke server pembuat artikel.');
+    } finally {
+      setGeneratingAI(false);
+    }
   };
 
   const [modalConfig, setModalConfig] = useState<{
@@ -254,9 +313,118 @@ export default function AdminPostForm() {
       {mediaPickerConfig && <MediaPickerModal onSelect={mediaPickerConfig.onSelect} onClose={() => setMediaPickerConfig(null)} />}
       {imageDetailsConfig && <ImageDetailsModal url={imageDetailsConfig.url} onConfirm={handleImageDetailsConfirm} onCancel={() => setImageDetailsConfig(null)} />}
       {linkModalOpen && <LinkDetailsModal onConfirm={handleLinkConfirm} onCancel={() => setLinkModalOpen(false)} />}
-      <div className="flex items-center gap-3 mb-4">
-        <Link to="/admin/posts" className="p-1.5 hover:bg-[#c3c4c7] hover:text-white rounded-full transition text-[#c3c4c7]"><ArrowLeft className="w-5 h-5" /></Link>
-        <h1 className="text-[23px] font-normal text-[#1d2327]">{isEdit ? 'Sunting Pos' : 'Tambah Pos Baru'}</h1>
+      {showAIModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-md shadow-xl max-w-lg w-full overflow-hidden flex flex-col border border-[#c3c4c7]">
+            {/* Header */}
+            <div className="p-4 bg-[#fcfcfc] border-b border-[#e2e4e7] flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#2271b1] animate-pulse" />
+              <h2 className="text-lg font-semibold text-[#1d2327]">Buat Artikel SEO dengan AI</h2>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 space-y-4 flex-1">
+              {aiError && (
+                <div className="p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded-r-sm">
+                  {aiError}
+                </div>
+              )}
+
+              <p className="text-xs text-[#646970] leading-relaxed w-full">
+                Fitur ini akan menggenerasi draf artikel lengkap (minimum 2.000 kata) secara otomatis 
+                menggunakan AI Gemini. Artikel yang dihasilkan mengikuti kaidah SEO modern (2026), 
+                EEAT, Semantic SEO, dan Search Intent.
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#1d2327] mb-1">
+                  Kata Kunci Utama (Keyword Utama) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: pest control jakarta, gas monitoring system"
+                  value={aiKeyword}
+                  onChange={(e) => setAiKeyword(e.target.value)}
+                  disabled={generatingAI}
+                  className="w-full px-3 py-2 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px] rounded bg-white text-gray-800"
+                />
+                <span className="text-[11px] text-[#646970] mt-1 block">
+                  Keyword ini akan dipasang di draf artikel, H1/H2, slug, meta title & description.
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#1d2327] mb-1">Nama Perusahaan</label>
+                  <input
+                    type="text"
+                    value={aiCompanyName}
+                    onChange={(e) => setAiCompanyName(e.target.value)}
+                    disabled={generatingAI}
+                    placeholder="PT Panca Prima Wijaya"
+                    className="w-full px-3 py-2 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px] rounded bg-white text-gray-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#1d2327] mb-1">Tautan WhatsApp (CTA)</label>
+                  <input
+                    type="text"
+                    value={aiWhatsappUrl}
+                    onChange={(e) => setAiWhatsappUrl(e.target.value)}
+                    disabled={generatingAI}
+                    placeholder="https://wa.me/..."
+                    className="w-full px-3 py-2 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px] rounded bg-white text-gray-800"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-[#f6f7f7] border-t border-[#e2e4e7] flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowAIModal(false)}
+                disabled={generatingAI}
+                className="bg-white hover:bg-gray-50 border border-[#c3c4c7] py-1.5 px-4 text-[13px] font-medium text-[#3c434a] rounded shadow-sm transition disabled:opacity-50 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateAI}
+                disabled={generatingAI}
+                className="bg-[#2271b1] hover:bg-[#135e96] text-white py-1.5 px-4 text-[13px] font-medium rounded shadow-sm transition flex items-center gap-2 disabled:bg-[#abccd8] cursor-pointer"
+              >
+                {generatingAI ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Menulis Draf (30-60 detik)...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" /> Mulai Tulis Artikel AI
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Link to="/admin/posts" className="p-1.5 hover:bg-[#c3c4c7] hover:text-white rounded-full transition text-[#c3c4c7]"><ArrowLeft className="w-5 h-5" /></Link>
+          <h1 className="text-[23px] font-normal text-[#1d2327]">{isEdit ? 'Sunting Pos' : 'Tambah Pos Baru'}</h1>
+        </div>
+        {!isEdit && (
+          <button
+            type="button"
+            onClick={() => setShowAIModal(true)}
+            className="border border-[#2271b1] text-[#2271b1] bg-[#f0f0f1] hover:bg-[#e5f5fa] px-3 py-1.5 text-[13px] rounded-sm flex items-center gap-2 font-medium transition cursor-pointer"
+          >
+            <Sparkles className="w-4.5 h-4.5" /> Buat Artikel AI (SEO)
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

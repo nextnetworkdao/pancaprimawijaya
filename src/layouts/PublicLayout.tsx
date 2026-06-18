@@ -1,21 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { ShoppingCart, ShieldCheck, Phone, Menu, X } from 'lucide-react';
+import { ShoppingCart, ShieldCheck, Phone, Menu, X, Globe, Home, MessageSquare, User, Building } from 'lucide-react';
 import { useCart } from '../store';
 import { cn } from '../lib/utils';
+import { resetAutoLinkTracker } from '../utils/autoLink';
+import { useLanguage } from '../context/LanguageContext';
 
 export function PublicLayout() {
   const { getTotalItemsBySite } = useCart();
   const location = useLocation();
+  const { isEn, t, langLink, toggleLanguage } = useLanguage();
   const [site, setSite] = useState<'panca' | 'sensor'>('panca');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isShopPage = 
+    location.pathname.includes('/produk') || 
+    location.pathname.includes('/katalog') || 
+    location.pathname.includes('/cart');
+  const isCatalogPage = location.pathname.includes('/produk') || location.pathname.includes('/katalog');
 
   useEffect(() => {
+    resetAutoLinkTracker();
     // Basic multisite detection for preview (path-based) and production (hostname based - optional future)
-    if (location.pathname.startsWith('/sensor')) {
+    if (location.pathname.startsWith('/sensor') || location.pathname.startsWith('/en/sensor')) {
       setSite('sensor');
       localStorage.setItem('currentSite', 'sensor');
-    } else if (location.pathname.startsWith('/panca') || location.pathname === '/') {
+    } else if (
+      location.pathname.startsWith('/panca') || 
+      location.pathname.startsWith('/en/panca') || 
+      location.pathname === '/' ||
+      location.pathname === '/en'
+    ) {
       setSite('panca');
       localStorage.setItem('currentSite', 'panca');
     } else {
@@ -31,28 +45,38 @@ export function PublicLayout() {
 
   if (site === 'sensor') {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+      <div className="min-h-screen bg-gray-50 flex flex-col font-sans animate-fade-in">
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-20">
               {/* Logo */}
               <div className="flex flex-shrink-0 items-center">
-                <Link to="/sensor" className="flex items-center gap-2">
+                <Link to={langLink('/sensor')} className="flex items-center gap-2">
                   <img src="https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png" alt="PT Panca Prima Wijaya Logo" className="h-12 w-auto" />
                 </Link>
               </div>
 
               {/* Desktop Menu */}
               <nav className="hidden md:flex space-x-8">
-                <Link to="/sensor" className="text-gray-600 hover:text-blue-700 font-medium">Beranda</Link>
-                <Link to="/sensor/produk" className="text-gray-600 hover:text-blue-700 font-medium">Produk Sensor</Link>
-                <Link to="/blog" className="text-gray-600 hover:text-blue-700 font-medium">Artikel Edukasi</Link>
-                <Link to="/tentang-kami" className="text-gray-600 hover:text-blue-700 font-medium">Tentang Kami</Link>
+                <Link to={langLink('/sensor')} className="text-gray-600 hover:text-blue-700 font-medium">{t('beranda')}</Link>
+                <Link to={langLink('/sensor/produk')} className="text-gray-600 hover:text-blue-700 font-medium">{t('produkSensor')}</Link>
+                <Link to={langLink('/blog')} className="text-gray-600 hover:text-blue-700 font-medium">{t('artikelEdukasi')}</Link>
+                <Link to={langLink('/tentang-kami')} className="text-gray-600 hover:text-blue-700 font-medium">{t('tentangKami')}</Link>
               </nav>
 
               {/* Actions */}
               <div className="flex items-center space-x-4">
-                <Link to="/cart" className="relative p-2 text-gray-600 hover:text-blue-700 transition">
+                {/* Language Switcher Button */}
+                <button 
+                  onClick={toggleLanguage} 
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 hover:text-blue-700 hover:border-blue-300 transition-all shadow-sm"
+                  title={isEn ? "Ubah ke Bahasa Indonesia" : "Switch to English"}
+                >
+                  <Globe className="h-3.5 w-3.5 text-blue-600 animate-spin-slow" />
+                  <span>{isEn ? 'English' : 'Bahasa'}</span>
+                </button>
+
+                <Link to={langLink('/cart')} className="relative p-2 text-gray-600 hover:text-blue-700 transition">
                   <ShoppingCart className="h-6 w-6" />
                   {getTotalItemsBySite('sensor') > 0 && (
                     <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
@@ -73,81 +97,143 @@ export function PublicLayout() {
           {isMobileMenuOpen && (
             <div className="md:hidden bg-white border-b border-gray-200">
               <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                <Link to="/sensor" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Beranda</Link>
-                <Link to="/sensor/produk" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Produk Sensor</Link>
-                <Link to="/blog" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Artikel Edukasi</Link>
-                <Link to="/tentang-kami" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Tentang Kami</Link>
+                <Link to={langLink('/sensor')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('beranda')}</Link>
+                <Link to={langLink('/sensor/produk')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('produkSensor')}</Link>
+                <Link to={langLink('/blog')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('artikelEdukasi')}</Link>
+                <Link to={langLink('/tentang-kami')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('tentangKami')}</Link>
               </div>
             </div>
           )}
         </header>
 
-        <main className="flex-1">
-          <Outlet />
+        <main className="flex-1 flex flex-col justify-start">
+          {isShopPage ? (
+            <div className="bg-[#f8fafc] w-full flex-1 flex flex-col justify-start pb-16">
+              <div className="max-w-md w-full mx-auto bg-white min-h-[calc(100vh-80px)] shadow-lg border-x border-gray-100 flex flex-col justify-between relative">
+                <div className="flex-1">
+                  <Outlet />
+                </div>
+                
+                {/* Fixed/Sticky Bottom App Navigation Bar */}
+                <div className="sticky bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 py-2.5 flex justify-around items-center w-full shadow-lg">
+                  <Link 
+                    to={langLink(site === 'sensor' ? '/sensor' : '/panca')}
+                    className="flex flex-col items-center flex-1 py-1 text-gray-400 hover:text-[#0a2558] transition"
+                  >
+                    <Home className="w-5 h-5 mb-1" />
+                    <span className="text-[10px] font-bold">Beranda</span>
+                  </Link>
+
+                  <Link 
+                    to={langLink(site === 'sensor' ? '/sensor/produk' : '/panca/produk')}
+                    className={`flex flex-col items-center flex-1 py-1 transition ${isCatalogPage ? 'text-[#0a2558]' : 'text-gray-400 hover:text-[#0a2558]'}`}
+                  >
+                    <Building className="w-5 h-5 mb-1" />
+                    <span className="text-[10px] font-bold">Mall</span>
+                  </Link>
+
+                  <a 
+                    href="https://wa.me/6285313200188"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col items-center flex-1 py-1 relative text-gray-400 hover:text-[#0a2558] transition"
+                  >
+                    <MessageSquare className="w-5 h-5 mb-1" />
+                    <span className="text-[10px] font-bold">Kotak Masuk</span>
+                    <span className="absolute top-1.5 right-6 w-2 h-2 bg-amber-500 rounded-full"></span>
+                  </a>
+
+                  <Link 
+                    to="/admin-login"
+                    className="flex flex-col items-center flex-1 py-1 text-gray-400 hover:text-[#0a2558] transition"
+                  >
+                    <User className="w-5 h-5 mb-1" />
+                    <span className="text-[10px] font-bold">Saya</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </main>
 
-        <footer className="bg-gray-900 text-gray-300 py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4 bg-white p-2 rounded w-fit">
-                <img src="https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png" alt="PT Panca Prima Wijaya Logo" className="h-8 w-auto" />
+        {!isShopPage && (
+          <footer className="bg-gray-900 text-gray-300 py-12 border-t border-gray-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div>
+                <div className="flex items-center gap-2 mb-4 bg-white p-2 rounded w-fit">
+                  <img src="https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png" alt="PT Panca Prima Wijaya Logo" className="h-8 w-auto" />
+                </div>
+                <p className="text-sm leading-relaxed">
+                  {isEn 
+                    ? 'PT. Panca Prima Wijaya is a premier integration solution provider for Building Management Systems (BMS), Early Warning Systems (EWS), Real Time Monitoring Systems (RTMS), and Toyo Earthquake Sensors for high-tech facilities, commercial structures, properties, and data centers.'
+                    : 'PT. Panca Prima Wijaya adalah perusahaan penyedia solusi Building Management System (BMS), Early Warning System (EWS), Real Time Monitoring System (RTMS), dan Sensor Gempa Toyo untuk gedung, pabrik, rumah sakit, hotel, data center, dan fasilitas industri modern.'}
+                </p>
               </div>
-              <p className="text-sm">
-                PT. Panca Prima Wijaya adalah perusahaan penyedia solusi Building Management System (BMS), Early Warning System (EWS), Real Time Monitoring System (RTMS), dan Sensor Gempa Toyo untuk gedung, pabrik, rumah sakit, hotel, data center, dan fasilitas industri modern.
-              </p>
+              <div>
+                <h3 className="text-white font-semibold mb-4 text-lg">{isEn ? 'Core Solutions' : 'Solusi Utama'}</h3>
+                <ul className="space-y-2 text-sm flex flex-col">
+                  <li><Link to={langLink('/sensor/early-warning-system')} className="hover:text-blue-400 transition-colors">Early Warning System</Link></li>
+                  <li><Link to={langLink('/sensor/sensor-gempa')} className="hover:text-blue-400 transition-colors">Sensor Gempa Toyo / Earthquake Sensors</Link></li>
+                  <li><Link to={langLink('/sensor/building-management-system')} className="hover:text-blue-400 transition-colors">Building Management System</Link></li>
+                  <li><Link to={langLink('/sensor/real-time-monitoring-system-rtms')} className="hover:text-blue-400 transition-colors">Real Time Monitoring System (RTMS)</Link></li>
+                  <li><Link to={langLink('/sensor/sparepart-lift-terlengkap')} className="hover:text-blue-400 transition-colors">{isEn ? 'Elevator & Escalator Spare Parts' : 'Spare Part Lift & Eskalator'}</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold mb-4 text-lg">{t('hubungiKami')}</h3>
+                <ul className="space-y-2 text-sm flex flex-col gap-2">
+                  <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-blue-500" /> 0853-1320-0188</li>
+                  <li className="leading-relaxed">Jalan Kayu Putih VII Blok A4 No. 8, RT.3/RW.6, Pulo Gadung, Kec. Pulo Gadung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 14240</li>
+                </ul>
+              </div>
             </div>
-            <div>
-              <h3 className="text-white font-semibold mb-4 text-lg">Solusi</h3>
-              <ul className="space-y-2 text-sm flex flex-col">
-                <li><Link to="/sensor/early-warning-system" className="hover:text-blue-400 transition-colors">Early Warning System</Link></li>
-                <li><Link to="/sensor/sensor-gempa" className="hover:text-blue-400 transition-colors">Sensor Gempa Toyo</Link></li>
-                <li><Link to="/sensor/building-management-system" className="hover:text-blue-400 transition-colors">Building Management System</Link></li>
-                <li><Link to="/sensor/real-time-monitoring-system-rtms" className="hover:text-blue-400 transition-colors">Real Time Monitoring System (RTMS)</Link></li>
-                <li><Link to="/sensor/sparepart-lift-terlengkap" className="hover:text-blue-400 transition-colors">Spare Part Lift & Eskalator</Link></li>
-              </ul>
+            <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-500">
+              {t('copyrightSensor')}
             </div>
-            <div>
-              <h3 className="text-white font-semibold mb-4 text-lg">Hubungi Kami</h3>
-              <ul className="space-y-2 text-sm flex flex-col gap-2">
-                <li className="flex items-center gap-2"><Phone className="h-4 w-4" /> 0853-1320-0188</li>
-                <li>Jalan Kayu Putih VII Blok A4 No. 8, RT.3/RW.6, Pulo Gadung, Kec. Pulo Gadung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 14240</li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-400">
-            copyright &copy; 2026 | PT. Panca Prima Wijaya
-          </div>
-        </footer>
+          </footer>
+        )}
       </div>
     );
   }
 
   // Panca Prima Wijaya Layout
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans animate-fade-in">
       {/* Navigation */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <div className="flex flex-shrink-0 items-center">
-              <Link to="/panca" className="flex items-center gap-2">
+              <Link to={langLink('/panca')} className="flex items-center gap-2">
                 <img src="https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png" alt="PT Panca Prima Wijaya Logo" className="h-12 w-auto" />
               </Link>
             </div>
 
             {/* Desktop Menu */}
             <nav className="hidden md:flex space-x-8">
-              <Link to="/panca" className="text-gray-600 hover:text-blue-700 font-medium">Beranda</Link>
-              <Link to="/layanan" className="text-gray-600 hover:text-blue-700 font-medium">Layanan Fumigasi</Link>
-              <Link to="/panca/produk" className="text-gray-600 hover:text-blue-700 font-medium">Katalog & E-commerce</Link>
-              <Link to="/blog" className="text-gray-600 hover:text-blue-700 font-medium">Artikel Edukasi</Link>
-              <Link to="/tentang-kami" className="text-gray-600 hover:text-blue-700 font-medium">Tentang Kami</Link>
+              <Link to={langLink('/panca')} className="text-gray-600 hover:text-blue-700 font-medium">{t('beranda')}</Link>
+              <Link to={langLink('/layanan')} className="text-gray-600 hover:text-blue-700 font-medium">{t('layananFumigasi')}</Link>
+              <Link to={langLink('/panca/produk')} className="text-gray-600 hover:text-blue-700 font-medium">{t('katalogEcommerce')}</Link>
+              <Link to={langLink('/blog')} className="text-gray-600 hover:text-blue-700 font-medium">{t('artikelEdukasi')}</Link>
+              <Link to={langLink('/tentang-kami')} className="text-gray-600 hover:text-blue-700 font-medium">{t('tentangKami')}</Link>
             </nav>
 
             {/* Actions */}
             <div className="flex items-center space-x-4">
-              <Link to="/cart" className="relative p-2 text-gray-600 hover:text-blue-700 transition">
+              {/* Language Switcher Button */}
+              <button 
+                onClick={toggleLanguage} 
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 hover:text-blue-700 hover:border-blue-300 transition-all shadow-sm"
+                title={isEn ? "Ubah ke Bahasa Indonesia" : "Switch to English"}
+              >
+                <Globe className="h-3.5 w-3.5 text-blue-600 animate-spin-slow" />
+                <span>{isEn ? 'English' : 'Bahasa'}</span>
+              </button>
+
+              <Link to={langLink('/cart')} className="relative p-2 text-gray-600 hover:text-blue-700 transition">
                 <ShoppingCart className="h-6 w-6" />
                 {getTotalItemsBySite('panca') > 0 && (
                   <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
@@ -168,11 +254,11 @@ export function PublicLayout() {
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white border-b border-gray-200">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              <Link to="/panca" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Beranda</Link>
-              <Link to="/layanan" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Layanan Fumigasi</Link>
-              <Link to="/panca/produk" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Katalog & E-commerce</Link>
-              <Link to="/blog" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Artikel Edukasi</Link>
-              <Link to="/tentang-kami" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Tentang Kami</Link>
+              <Link to={langLink('/panca')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('beranda')}</Link>
+              <Link to={langLink('/layanan')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('layananFumigasi')}</Link>
+              <Link to={langLink('/panca/produk')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('katalogEcommerce')}</Link>
+              <Link to={langLink('/blog')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('artikelEdukasi')}</Link>
+              <Link to={langLink('/tentang-kami')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('tentangKami')}</Link>
             </div>
           </div>
         )}
@@ -184,37 +270,41 @@ export function PublicLayout() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
-            <div className="flex items-center gap-2 mb-4 bg-white p-2 rounded w-fit">
-              <img src="https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png" alt="PT Panca Prima Wijaya Logo" className="h-8 w-auto" />
+        {!isShopPage && (
+          <footer className="bg-gray-900 text-gray-300 py-12 border-t border-gray-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div>
+                <div className="flex items-center gap-2 mb-4 bg-white p-2 rounded w-fit">
+                  <img src="https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png" alt="PT Panca Prima Wijaya Logo" className="h-8 w-auto" />
+                </div>
+                <p className="text-sm leading-relaxed">
+                  {isEn 
+                    ? 'One-stop solution for crop protection consultation, grain pest control, professional agricultural fumigation and high-fidelity warning/monitoring technologies.'
+                    : 'One-stop solution untuk konsultasi, pengendalian hama, penanganan pasca panen komoditas pertanian, serta teknologi sistem keamanan dan monitoring modern.'}
+                </p>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold mb-4 text-lg">{isEn ? 'Our Main Services' : 'Layanan Utama'}</h3>
+                <ul className="space-y-2 text-sm">
+                  <li>{isEn ? 'Agricultural Grain & Rice Fumigation' : 'Fumigasi Beras & Biji-bijian'}</li>
+                  <li>{isEn ? 'Professional Port Warehouse Sanitation' : 'Sanitasi Gudang Pangan'}</li>
+                  <li>{isEn ? 'Early Warning System (EWS)' : 'Early Warning System (EWS)'}</li>
+                  <li>{isEn ? 'Structural Health Monitoring (SHMS)' : 'Structural Health Monitoring (SHMS)'}</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold mb-4 text-lg">{t('hubungiKami')}</h3>
+                <ul className="space-y-2 text-sm flex flex-col gap-2">
+                  <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-blue-500" /> 0853-1320-0188</li>
+                  <li className="leading-relaxed">Jalan Kayu Putih VII Blok A4 No. 8, RT.3/RW.6, Pulo Gadung, Kec. Pulo Gadung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 14240</li>
+                </ul>
+              </div>
             </div>
-            <p className="text-sm">
-              One-stop solution untuk konsultasi, pengendalian hama, penanganan pasca panen komoditas pertanian, serta teknologi sistem keamanan dan monitoring modern.
-            </p>
-          </div>
-          <div>
-            <h3 className="text-white font-semibold mb-4 text-lg">Layanan Utama</h3>
-            <ul className="space-y-2 text-sm">
-              <li>Fumigasi Beras & Biji-bijian</li>
-              <li>Sanitasi Gudang Pangan</li>
-              <li>Early Warning System (EWS)</li>
-              <li>Structural Health Monitoring (SHMS)</li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-white font-semibold mb-4 text-lg">Hubungi Kami</h3>
-            <ul className="space-y-2 text-sm flex flex-col gap-2">
-              <li className="flex items-center gap-2"><Phone className="h-4 w-4" /> 0853-1320-0188</li>
-              <li>Jalan Kayu Putih VII Blok A4 No. 8, RT.3/RW.6, Pulo Gadung, Kec. Pulo Gadung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 14240</li>
-            </ul>
-          </div>
-        </div>
-        <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-400">
-          copyright &copy; 2026 | PT. Panca Prima Wijaya
-        </div>
-      </footer>
+            <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-500">
+              {t('copyright')}
+            </div>
+          </footer>
+        )}
     </div>
   );
 }

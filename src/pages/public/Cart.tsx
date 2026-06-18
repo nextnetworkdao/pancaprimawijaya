@@ -63,77 +63,79 @@ export default function Cart() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="p-4 bg-white">
       <SEO title="Keranjang Belanja | PT Panca Prima Wijaya" description="Detail pesanan dan checkout" />
       
-      <h1 className="text-3xl font-black text-gray-900 tracking-tight mb-8">Keranjang Konsultasi / Pesanan</h1>
-
-      {siteItems.length === 0 ? (
-        <div className="bg-white border rounded-xl p-12 text-center">
-          <p className="text-gray-500 mb-6">Belum ada item di dalam keranjang Anda.</p>
-          <Link to={site === 'sensor' ? '/sensor/produk' : '/panca/produk'} className="bg-blue-600 text-white font-medium px-6 py-3 rounded-lg">Cari Layanan/Produk</Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-6">
-            {siteItems.map(({ product, quantity }) => (
-              <div key={product.id} className="flex gap-6 bg-white p-6 rounded-2xl border border-gray-200">
-                <img src={product.image || undefined} alt={product.name} className="w-24 h-24 object-cover rounded-lg bg-gray-100" />
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900">{product.name}</h3>
-                  <p className="text-gray-500 text-sm mt-1">{product.category}</p>
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className="font-semibold">{formatCurrency(product.price)}</span>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-medium">Qty: {quantity}</span>
-                      <button onClick={() => removeItem(product.id)} className="text-red-500 p-2 hover:bg-red-50 rounded-full">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Checkout Form */}
-          <div className="bg-white p-8 rounded-2xl border border-gray-200 h-fit sticky top-28">
-            <h3 className="text-xl font-bold mb-6">Ringkasan Pemesanan</h3>
-            <div className="flex justify-between items-center mb-6 pb-6 border-b text-xl font-black">
-              <span>Total Estimasi</span>
-              <span>{formatCurrency(siteTotalPrice)}</span>
-            </div>
-
-            <form onSubmit={handleCheckout} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Perusahaan / Individual</label>
-                <input required name="name" type="text" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input required name="email" type="email" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Alamat Penanganan / Pengiriman</label>
-                <textarea required name="address" rows={3} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              
-              <div className="pt-4">
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white font-bold py-4 rounded-xl hover:bg-gray-800 disabled:opacity-75"
-                >
-                  <ShieldCheck className="w-5 h-5" />
-                  {loading ? 'Memproses Gateway...' : 'Proses Pesanan Otomatis'}
-                </button>
-                <p className="text-xs text-gray-500 text-center mt-4">Integrasi API Gateway terenkripsi.</p>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+      <h1 className="text-xl font-black text-[#0a2558] tracking-tight mb-6">Keranjang Belanja</h1>
+ 
+       {siteItems.length === 0 ? (
+        <div className="bg-white border rounded-2xl p-8 text-center shadow-sm">
+           <p className="text-gray-500 mb-6 text-sm">Belum ada item di dalam keranjang Anda.</p>
+           <Link to={site === 'sensor' ? '/sensor/produk' : '/panca/produk'} className="bg-[#0a2558] hover:bg-[#06183b] text-white font-bold px-6 py-2.5 rounded-full text-xs transition shadow-md inline-block">Cari Layanan/Produk</Link>
+         </div>
+       ) : (
+        <div className="flex flex-col gap-6">
+           {/* Cart Items */}
+          <div className="space-y-4">
+             {siteItems.map(({ product, quantity }) => (
+              <div key={product.id} className="flex gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                <img src={product.image || undefined} alt={product.name} className="w-16 h-16 object-cover rounded-xl bg-gray-50 border p-1" />
+                 <div className="flex-1 flex flex-col justify-between">
+                   <div>
+                     <h3 className="font-extrabold text-[#0a2558] text-sm line-clamp-1">{product.name}</h3>
+                     <p className="text-gray-400 text-[10px] mt-0.5 font-semibold">{product.category}</p>
+                   </div>
+                   <div className="mt-2 flex items-center justify-between">
+                     <span className="font-bold text-[#0a2558] text-xs">{formatCurrency(product.price)}</span>
+                     <div className="flex items-center gap-3">
+                       <span className="text-[11px] font-bold text-gray-500">Qty: {quantity}</span>
+                       <button onClick={() => removeItem(product.id)} className="text-red-500 p-1.5 hover:bg-red-50 rounded-full transition-colors" aria-label="Hapus">
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             ))}
+           </div>
+ 
+           {/* Checkout Form */}
+          <div className="bg-slate-50 p-5 rounded-2xl border border-gray-100 shadow-sm">
+             <h3 className="text-base font-black text-[#0a2558] mb-4">Ringkasan Pemesanan</h3>
+            <div className="flex justify-between items-center mb-4 pb-4 border-b text-base font-black">
+               <span>Total Estimasi</span>
+               <span className="text-[#0a2558]">{formatCurrency(siteTotalPrice)}</span>
+             </div>
+ 
+             <form onSubmit={handleCheckout} className="space-y-4">
+               <div>
+                 <label className="block text-[10px] font-bold text-gray-700 mb-1 uppercase tracking-wide">Nama Perusahaan / Individual</label>
+                 <input required name="name" type="text" className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-[#0a2558] focus:border-[#0a2558] outline-none text-xs font-semibold" />
+               </div>
+               <div>
+                 <label className="block text-[10px] font-bold text-gray-700 mb-1 uppercase tracking-wide">Email</label>
+                 <input required name="email" type="email" className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-[#0a2558] focus:border-[#0a2558] outline-none text-xs font-semibold" />
+               </div>
+               <div>
+                 <label className="block text-[10px] font-bold text-gray-700 mb-1 uppercase tracking-wide">Alamat Penanganan / Pengiriman</label>
+                 <textarea required name="address" rows={2} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-[#0a2558] focus:border-[#0a2558] outline-none text-xs font-semibold" />
+               </div>
+               
+               <div className="pt-2">
+                 <button 
+                   type="submit" 
+                   disabled={loading}
+                   className="w-full flex items-center justify-center gap-2 bg-[#0a2558] text-white font-extrabold py-3.5 rounded-xl hover:bg-[#06183b] disabled:opacity-75 transition-all text-xs shadow-md"
+                 >
+                   <ShieldCheck className="w-4 h-4 text-amber-500" />
+                   {loading ? 'Memproses Gateway...' : 'Proses Pesanan Otomatis'}
+                 </button>
+                 <p className="text-[9px] text-gray-400 text-center mt-3 font-semibold">Integrasi API Gateway terenkripsi.</p>
+               </div>
+             </form>
+           </div>
+         </div>
+       )}
+     </div>
   );
 }

@@ -7,13 +7,40 @@ export function ProductSlider() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
+    let mounted = true;
     fetch('/api/settings/slider')
-      .then(res => res.json())
+      .then(res => res.ok ? res.text() : Promise.reject(res.status))
+      .then(text => {
+        if (!text) return {};
+        try {
+          return JSON.parse(text);
+        } catch(e) {
+          return {};
+        }
+      })
       .then(d => {
-        if (d && Array.isArray(d.posters) && d.posters.length > 0) {
-          setPosters(d.posters);
+        if (mounted) {
+          if (d && Array.isArray(d.posters) && d.posters.length > 0) {
+            setPosters(d.posters);
+          } else {
+            // Fallback default banners if admin hasn't set any
+            setPosters([
+              { id: '1', image: 'https://wpmartfury.com/marketplace5/wp-content/uploads/sites/6/2023/01/c1-1650.jpg' },
+              { id: '2', image: 'https://wpmartfury.com/marketplace5/wp-content/uploads/sites/6/2023/01/c2-1650.jpg' }
+            ]);
+          }
+        }
+      })
+      .catch(e => {
+        console.error('Failed to load slider', e);
+        if (mounted) {
+          setPosters([
+            { id: '1', image: 'https://wpmartfury.com/marketplace5/wp-content/uploads/sites/6/2023/01/c1-1650.jpg' },
+            { id: '2', image: 'https://wpmartfury.com/marketplace5/wp-content/uploads/sites/6/2023/01/c2-1650.jpg' }
+          ]);
         }
       });
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
@@ -35,45 +62,47 @@ export function ProductSlider() {
   };
 
   return (
-    <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 mt-6">
-      <div className="relative w-full aspect-[21/9] sm:aspect-[4/1] rounded-2xl overflow-hidden shadow-sm group">
-        <AnimatePresence mode="popLayout">
+    <div className="relative w-full mb-8 bg-gray-100 border-b border-gray-200">
+      <div className="relative w-full aspect-[21/9] sm:aspect-[4/1] lg:aspect-[6/1] overflow-hidden group">
+        <AnimatePresence mode="wait">
           <motion.img
             key={currentIndex}
             src={posters[currentIndex].image}
-            alt="Promo Slider"
+            alt={`Promo Slider ${currentIndex + 1}`}
             className="absolute inset-0 w-full h-full object-cover"
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -100 }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           />
         </AnimatePresence>
+
+        <div className="absolute inset-0 bg-black/10 pointer-events-none" />
 
         {posters.length > 1 && (
           <>
             <button
               onClick={handlePrev}
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-md p-3 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all border border-white/20 shadow-lg"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-6 h-6" />
             </button>
             <button
               onClick={handleNext}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-md p-3 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all border border-white/20 shadow-lg"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-6 h-6" />
             </button>
 
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
               {posters.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentIndex(idx)}
                   className={`transition-all rounded-full ${
                     currentIndex === idx 
-                      ? "w-6 h-2 bg-white" 
-                      : "w-2 h-2 bg-white/50 hover:bg-white/80"
+                      ? "w-8 h-2 bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)]" 
+                      : "w-2 h-2 bg-white/40 hover:bg-white/80"
                   }`}
                 />
               ))}

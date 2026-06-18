@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+  <!-- Splash / Intro -->
+  <url>
+    <loc>https://pancaprimawijaya.com/</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- PT Panca Prima Wijaya Home -->
+  <url>
+    <loc>https://pancaprimawijaya.com/panca</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/panca</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Jasa Fumigasi Beras & Gudang -->
+  <url>
+    <loc>https://pancaprimawijaya.com/panca/jasa-fumigasi-beras</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/jasa-fumigasi-beras" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/jasa-fumigasi-beras" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/panca/jasa-fumigasi-beras</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/jasa-fumigasi-beras" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/jasa-fumigasi-beras" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Sanitasi Gudang Pangan -->
+  <url>
+    <loc>https://pancaprimawijaya.com/panca/sanitasi-gudang-pangan-profesional</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/sanitasi-gudang-pangan-profesional" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/sanitasi-gudang-pangan-profesional" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/panca/sanitasi-gudang-pangan-profesional</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/sanitasi-gudang-pangan-profesional" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/sanitasi-gudang-pangan-profesional" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Jasa Fumigasi Kapal & Kontainer -->
+  <url>
+    <loc>https://pancaprimawijaya.com/panca/jasa-fumigasi-kapal</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/jasa-fumigasi-kapal" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/jasa-fumigasi-kapal" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/panca/jasa-fumigasi-kapal</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/jasa-fumigasi-kapal" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/jasa-fumigasi-kapal" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Katalog / Produk Utama Panca -->
+  <url>
+    <loc>https://pancaprimawijaya.com/panca/produk</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/produk" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/produk" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/panca/produk</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/produk" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/produk" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Sensor Gempa & IoT Monitoring Home -->
+  <url>
+    <loc>https://pancaprimawijaya.com/sensor</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/sensor</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Building Management System -->
+  <url>
+    <loc>https://pancaprimawijaya.com/sensor/building-management-system</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/building-management-system" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/building-management-system" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/sensor/building-management-system</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/building-management-system" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/building-management-system" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Early Warning System -->
+  <url>
+    <loc>https://pancaprimawijaya.com/sensor/early-warning-system</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/early-warning-system" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/early-warning-system" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/sensor/early-warning-system</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/early-warning-system" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/early-warning-system" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Real Time Monitoring System (RTMS) -->
+  <url>
+    <loc>https://pancaprimawijaya.com/sensor/real-time-monitoring-system-rtms</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/real-time-monitoring-system-rtms" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/real-time-monitoring-system-rtms" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/sensor/real-time-monitoring-system-rtms</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/real-time-monitoring-system-rtms" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/real-time-monitoring-system-rtms" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Sensor Gempa Toyo -->
+  <url>
+    <loc>https://pancaprimawijaya.com/sensor/sensor-gempa</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/sensor-gempa" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/sensor-gempa" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/sensor/sensor-gempa</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/sensor-gempa" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/sensor-gempa" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Sparepart Lift Terlengkap -->
+  <url>
+    <loc>https://pancaprimawijaya.com/sensor/sparepart-lift-terlengkap</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/sparepart-lift-terlengkap" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/sparepart-lift-terlengkap" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/sensor/sparepart-lift-terlengkap</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/sparepart-lift-terlengkap" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/sparepart-lift-terlengkap" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Katalog Produk Sensor -->
+  <url>
+    <loc>https://pancaprimawijaya.com/sensor/produk</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/produk" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/produk" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/sensor/produk</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/produk" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/produk" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- General Katalog -->
+  <url>
+    <loc>https://pancaprimawijaya.com/katalog</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/katalog" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/katalog" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/katalog</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/katalog" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/katalog" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Blog & Artikel Edukasi -->
+  <url>
+    <loc>https://pancaprimawijaya.com/blog</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/blog" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/blog" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/blog</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/blog" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/blog" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Tentang Kami -->
+  <url>
+    <loc>https://pancaprimawijaya.com/tentang-kami</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/tentang-kami" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/tentang-kami" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://pancaprimawijaya.com/en/tentang-kami</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/tentang-kami" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/tentang-kami" />
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+</urlset>

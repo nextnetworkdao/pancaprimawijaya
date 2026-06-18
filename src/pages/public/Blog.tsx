@@ -22,6 +22,12 @@ export default function Blog() {
       <SEO 
         title="Artikel & Edukasi | PT Panca Prima Wijaya"
         description="Edukasi mengenai pentingnya fumigasi, teknologi EWS, sanitasi, dan penanganan pasca panen komoditas pangan."
+        type="website"
+        canonical={typeof window !== 'undefined' ? window.location.href : ''}
+        breadcrumbs={[
+          { name: 'Beranda', item: typeof window !== 'undefined' ? window.location.origin : '' },
+          { name: 'Blog', item: typeof window !== 'undefined' ? window.location.href : '' }
+        ]}
       />
       
       <div className="mb-12 border-b pb-6">

@@ -8,7 +8,8 @@ export function ScriptInjector() {
     const fetchAndInject = async () => {
       try {
         const res = await fetch('/api/scripts?active=true');
-        const scripts = await res.json();
+        const text = await res.text();
+        const scripts = text ? JSON.parse(text) : [];
         
         if (!mounted || !Array.isArray(scripts)) return;
         

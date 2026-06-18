@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Settings, X, Plus } from 'lucide-react';
+import { ArrowLeft, Save, Settings, X, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { Product } from '../../types';
 import { MediaPickerModal } from '../../components/MediaPickerModal';
 
@@ -20,6 +20,16 @@ export default function AdminProductForm() {
 
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState('');
+
+  const [editorMode, setEditorMode] = useState<'visual' | 'text'>('visual');
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiKeyword, setAiKeyword] = useState('');
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [aiError, setAiError] = useState('');
+  
+  const visualEditorRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [savedRange, setSavedRange] = useState<Range | null>(null);
 
   useEffect(() => {
     fetch('/api/categories/products').then(r => r.json()).then(data => setCategories(data));
@@ -79,6 +89,108 @@ export default function AdminProductForm() {
     navigate('/admin/products');
   };
 
+  const handleGenerateAI = async () => {
+    if (!aiKeyword.trim()) {
+      setAiError('Keyword tidak boleh kosong');
+      return;
+    }
+    
+    setGeneratingAI(true);
+    setAiError('');
+    
+    try {
+      const res = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword: aiKeyword })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Terjadi kesalahan');
+      }
+
+      setFormData(prev => ({ 
+        ...prev, 
+        seoArticle: data.fullContent,
+        seoTitle: data.seoTitle,
+        seoDescription: data.seoMeta
+      }));
+      
+      if (visualEditorRef.current) {
+        visualEditorRef.current.innerHTML = data.fullContent || '';
+      }
+
+      setShowAIModal(false);
+      setAiKeyword('');
+    } catch (err: any) {
+      console.error(err);
+      setAiError(err.message || 'Gagal tersambung ke server pembuat artikel.');
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
+
+  useEffect(() => {
+    if (editorMode === 'visual' && visualEditorRef.current) {
+        if (visualEditorRef.current.innerHTML !== formData.seoArticle) {
+            visualEditorRef.current.innerHTML = formData.seoArticle || '';
+        }
+    }
+  }, [editorMode, formData.seoArticle]);
+
+  const handleVisualInput = () => {
+    if (visualEditorRef.current) {
+        setFormData(prev => ({ ...prev, seoArticle: visualEditorRef.current!.innerHTML }));
+    }
+  };
+
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+        setSavedRange(sel.getRangeAt(0));
+    }
+  };
+
+  const restoreSelection = () => {
+    visualEditorRef.current?.focus();
+    if (savedRange) {
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(savedRange);
+    }
+  };
+
+  const insertTag = (tagStart: string, tagEnd: string = '') => {
+    const area = textareaRef.current;
+    if (!area) return;
+    
+    const start = area.selectionStart;
+    const end = area.selectionEnd;
+    const text = area.value;
+    const before = text.substring(0, start);
+    const selected = text.substring(start, end);
+    const after = text.substring(end, text.length);
+
+    setFormData(prev => ({
+        ...prev,
+        seoArticle: before + tagStart + selected + tagEnd + after
+    }));
+
+    setTimeout(() => {
+        area.focus();
+        area.setSelectionRange(start + tagStart.length, end + tagStart.length);
+    }, 0);
+  };
+
+  const execCmd = (cmd: string, val?: string) => {
+    restoreSelection();
+    document.execCommand(cmd, false, val);
+    handleVisualInput();
+    saveSelection();
+  };
+
   return (
     <form onSubmit={handleSubmit} className="max-w-6xl mx-auto h-full flex flex-col text-[#3c434a]">
       {mediaPickerConfig && <MediaPickerModal onSelect={mediaPickerConfig.onSelect} onClose={() => setMediaPickerConfig(null)} />}
@@ -122,6 +234,59 @@ export default function AdminProductForm() {
               </div>
             </div>
           </div>
+
+          {/* Editor SEO Article */}
+          <div className="bg-white border border-[#c3c4c7] rounded-sm mt-5 shadow-sm">
+            <div className="p-3 border-b border-[#c3c4c7] flex justify-between items-center bg-[#f6f7f7]">
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setEditorMode('visual')} className={`px-3 py-1 text-[13px] border border-[#c3c4c7] ${editorMode === 'visual' ? 'bg-[#f0f0f1] text-[#1d2327]' : 'bg-white text-[#2271b1] hover:bg-[#f6f7f7]'} border-b-0 -mb-[13px] pb-[13px]`}>Visual</button>
+                <button type="button" onClick={() => setEditorMode('text')} className={`px-3 py-1 text-[13px] border border-[#c3c4c7] ${editorMode === 'text' ? 'bg-[#f0f0f1] text-[#1d2327]' : 'bg-white text-[#2271b1] hover:bg-[#f6f7f7]'} border-b-0 -mb-[13px] pb-[13px]`}>Teks</button>
+              </div>
+              <button type="button" onClick={() => setShowAIModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#8a2424] text-white text-[13px] font-medium rounded-sm hover:bg-[#7a1414] transition-colors"><Sparkles className="w-4 h-4" /> Buat Artikel SEO dengan AI</button>
+            </div>
+            
+            <div className="border-t border-[#c3c4c7]">
+              {editorMode === 'visual' ? (
+                <div className="bg-[#f0f0f1] border-b border-[#c3c4c7] p-2 flex gap-1 flex-wrap">
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="px-2 py-1 hover:bg-white border border-transparent hover:border-[#c3c4c7] rounded-sm font-bold text-[13px]">B</button>
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="px-2 py-1 hover:bg-white border border-transparent hover:border-[#c3c4c7] rounded-sm italic text-[13px]">I</button>
+                  <span className="w-px h-5 bg-[#c3c4c7] my-auto mx-1"></span>
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('insertUnorderedList'); }} className="px-2 py-1 hover:bg-white border border-transparent hover:border-[#c3c4c7] rounded-sm text-[13px]">• List</button>
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('insertOrderedList'); }} className="px-2 py-1 hover:bg-white border border-transparent hover:border-[#c3c4c7] rounded-sm text-[13px]">1. List</button>
+                  <span className="w-px h-5 bg-[#c3c4c7] my-auto mx-1"></span>
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="px-2 py-1 hover:bg-white border border-transparent hover:border-[#c3c4c7] rounded-sm text-[13px] font-bold">H2</button>
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H3'); }} className="px-2 py-1 hover:bg-white border border-transparent hover:border-[#c3c4c7] rounded-sm text-[13px] font-bold">H3</button>
+                </div>
+              ) : (
+                <div className="bg-[#f0f0f1] border-b border-[#c3c4c7] p-2 flex gap-1 flex-wrap">
+                  <button type="button" onClick={() => insertTag('<strong>', '</strong>')} className="px-2 py-1 hover:bg-white border border-transparent hover:border-[#c3c4c7] rounded-sm text-[13px]">b</button>
+                  <button type="button" onClick={() => insertTag('<em>', '</em>')} className="px-2 py-1 hover:bg-white border border-transparent hover:border-[#c3c4c7] rounded-sm text-[13px]">i</button>
+                  <button type="button" onClick={() => insertTag('<a href="" target="_blank">', '</a>')} className="px-2 py-1 hover:bg-white border border-transparent hover:border-[#c3c4c7] rounded-sm text-[13px]">link</button>
+                </div>
+              )}
+              
+              <div className="min-h-[400px] flex">
+                {editorMode === 'visual' ? (
+                  <div 
+                    ref={visualEditorRef}
+                    contentEditable
+                    onInput={handleVisualInput}
+                    onBlur={handleVisualInput}
+                    className="w-full min-h-[400px] p-4 outline-none text-[15px] text-[#3c434a] bg-white prose max-w-none flex-1 border-0"
+                  />
+                ) : (
+                  <textarea 
+                    ref={textareaRef}
+                    name="seoArticle"
+                    value={formData.seoArticle || ''}
+                    onChange={handleChange}
+                    className="w-full min-h-[400px] p-4 outline-none text-[14px] font-mono text-[#3c434a] flex-1 resize-y border-0 focus:ring-0"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
           
           <div className="bg-white border border-[#c3c4c7] rounded-sm mt-5 shadow-sm">
             <div className="p-3 border-b border-[#c3c4c7] bg-white flex items-center justify-between">
@@ -340,6 +505,77 @@ export default function AdminProductForm() {
           </div>
         </div>
       </div>
+
+      {showAIModal && (
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-sm shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="bg-[#f0f0f1] px-4 py-3 border-b flex justify-between items-center">
+              <h3 className="font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-[#2271b1]" /> Buat Artikel SEO Pembantu</h3>
+              <button 
+                onClick={() => !generatingAI && setShowAIModal(false)}
+                className="text-gray-500 hover:text-black"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5">
+              <p className="text-[13px] text-gray-600 mb-4 pb-4 border-b border-[#f0f0f1]">
+                AI akan membuatkan artikel pendukung untuk produk ini secara lengkap mulai dari H1 hingga H3, paragraf SEO, Meta Description, Meta Title, hingga list artikel yang cocok dengan kata kunci produk Anda.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-[13px] font-semibold mb-2">Kata Kunci Utama / Topik</label>
+                <input 
+                  autoFocus
+                  type="text"
+                  placeholder="Contoh: Manfaat Obat Kutu Beras Terbaik"
+                  className="w-full px-3 py-2 border border-[#c3c4c7] outline-none focus:border-[#2271b1] text-[13px]"
+                  value={aiKeyword}
+                  onChange={(e) => setAiKeyword(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleGenerateAI();
+                    }
+                  }}
+                  disabled={generatingAI}
+                />
+              </div>
+
+              {aiError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-[13px] rounded-sm">
+                  {aiError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button 
+                  type="button"
+                  onClick={() => setShowAIModal(false)}
+                  className="px-4 py-2 border border-[#c3c4c7] text-[#2271b1] text-[13px] hover:bg-[#f6f7f7]"
+                  disabled={generatingAI}
+                >
+                  Batal
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleGenerateAI}
+                  disabled={generatingAI || !aiKeyword.trim()}
+                  className="px-4 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white text-[13px] font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generatingAI ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Sedang Membuat...</>
+                  ) : (
+                    <><Sparkles className="w-4 h-4" /> Generate AI</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </form>
   );
 }

@@ -5,6 +5,7 @@ import multer from 'multer';
 import sharp from 'sharp';
 import fs from 'fs';
 import { Pool } from 'pg';
+import { GoogleGenAI, Type } from "@google/genai";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_KXPcOL8yei6r@ep-restless-waterfall-aocnkn4e-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
@@ -56,6 +57,7 @@ async function startServer() {
           image VARCHAR(255),
           gallery JSONB,
           description TEXT,
+          seoarticle TEXT,
           seotitle VARCHAR(255),
           seodescription TEXT,
           keywords TEXT,
@@ -63,6 +65,15 @@ async function startServer() {
           createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updatedat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      
+      -- Alter table to add seoarticle if it doesn't exist
+      DO $$
+      BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='seoarticle') THEN
+              ALTER TABLE products ADD COLUMN seoarticle TEXT;
+          END IF;
+      END $$;
+
       ALTER TABLE products ADD COLUMN IF NOT EXISTS gallery JSONB;
 
       ALTER TABLE pages ADD COLUMN IF NOT EXISTS canonical VARCHAR(255);
@@ -82,6 +93,28 @@ async function startServer() {
       ALTER TABLE posts ADD COLUMN IF NOT EXISTS category VARCHAR(255);
       ALTER TABLE posts ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'publish';
       ALTER TABLE pages ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'publish';
+
+      -- Pre-translated English columns for instant performance & perfect SEO
+      ALTER TABLE posts ADD COLUMN IF NOT EXISTS title_en VARCHAR(255);
+      ALTER TABLE posts ADD COLUMN IF NOT EXISTS slug_en VARCHAR(255);
+      ALTER TABLE posts ADD COLUMN IF NOT EXISTS content_en TEXT;
+      ALTER TABLE posts ADD COLUMN IF NOT EXISTS seotitle_en VARCHAR(255);
+      ALTER TABLE posts ADD COLUMN IF NOT EXISTS seodescription_en TEXT;
+      ALTER TABLE posts ADD COLUMN IF NOT EXISTS keywords_en TEXT;
+
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS name_en VARCHAR(255);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS slug_en VARCHAR(255);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS description_en TEXT;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS seoarticle_en TEXT;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS seotitle_en VARCHAR(255);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS seodescription_en TEXT;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS keywords_en TEXT;
+
+      ALTER TABLE pages ADD COLUMN IF NOT EXISTS title_en VARCHAR(255);
+      ALTER TABLE pages ADD COLUMN IF NOT EXISTS slug_en VARCHAR(255);
+      ALTER TABLE pages ADD COLUMN IF NOT EXISTS content_en TEXT;
+      ALTER TABLE pages ADD COLUMN IF NOT EXISTS seotitle_en VARCHAR(255);
+      ALTER TABLE pages ADD COLUMN IF NOT EXISTS seodescription_en TEXT;
 
       CREATE TABLE IF NOT EXISTS orders (
           id VARCHAR(255) PRIMARY KEY,
@@ -108,11 +141,397 @@ async function startServer() {
       );
     `);
     console.log("Database tables verified/created successfully.");
+    runDatabaseTranslationMigration(); // Trigger the background auto-translation migration
   } catch (err) {
     console.error("Failed to verify tables:", err);
   }
 
+  // --- AUTO-TRANSLATION SERVER-SIDE HELPERS (GEMINI 3.5 FLASH) ---
+  async function translatePostAI(ai: any, title: string, content: string, seoTitle: string, seoDescription: string, keywords: string) {
+    try {
+      const res = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: `You are an expert bilingual content editor and professional SEO analyst.
+  Translate the following Indonesian blog post content and SEO parameters into natural, high-converting English.
+  CRITICAL MANDATES:
+  1. Preserve all HTML structure, inline styles, tags (e.g. figure, img, figcaption, a, inline target attributes, table, thead, tbody, etc.) EXACTLY inside the translated content. Do not drop or break any HTML element.
+  2. The translated slug_en must be a clean URL path (lowercase, alphanumeric, with '-' separators) based on the translated title.
+  3. Make all English copy natural, native-sounding, and deeply optimized for SEO keywords.
+
+  ORIGINAL INDONESIAN CONTENT:
+  Title: "${title}"
+  Content: ${content}
+  SEO Title: "${seoTitle || ''}"
+  SEO Description: "${seoDescription || ''}"
+  Keywords: "${keywords || ''}"`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title_en: { type: Type.STRING },
+              slug_en: { type: Type.STRING },
+              content_en: { type: Type.STRING },
+              seotitle_en: { type: Type.STRING },
+              seodescription_en: { type: Type.STRING },
+              keywords_en: { type: Type.STRING }
+            },
+            required: ['title_en', 'slug_en', 'content_en', 'seotitle_en', 'seodescription_en', 'keywords_en']
+          }
+        }
+      });
+
+      const text = res.text || '{}';
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("translatePostAI failed:", err);
+      return {
+        title_en: title,
+        slug_en: (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+        content_en: content,
+        seotitle_en: seoTitle || '',
+        seodescription_en: seoDescription || '',
+        keywords_en: keywords || ''
+      };
+    }
+  }
+
+  async function translateProductAI(ai: any, name: string, description: string, seoarticle: string, seoTitle: string, seoDescription: string, keywords: string) {
+    try {
+      const res = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: `You are an expert e-commerce catalog translator and professional SEO specialist.
+  Translate the following Indonesian product specifications, content guides, and SEO attributes into natural, elegant English.
+  CRITICAL MANDATES:
+  1. Preserve all HTML structures, tables, and spacing EXACTLY.
+  2. The translated slug_en must be a clean URL slug (lowercase, alphanumeric, with '-' separators) based on the translated product name.
+
+  ORIGINAL INDONESIAN INFO:
+  Name: "${name}"
+  Description: ${description}
+  SEO Article Guide: ${seoarticle || ''}
+  SEO Title: "${seoTitle || ''}"
+  SEO Description: "${seoDescription || ''}"
+  Keywords: "${keywords || ''}"`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              name_en: { type: Type.STRING },
+              slug_en: { type: Type.STRING },
+              description_en: { type: Type.STRING },
+              seoarticle_en: { type: Type.STRING },
+              seotitle_en: { type: Type.STRING },
+              seodescription_en: { type: Type.STRING },
+              keywords_en: { type: Type.STRING }
+            },
+            required: ['name_en', 'slug_en', 'description_en', 'seoarticle_en', 'seotitle_en', 'seodescription_en', 'keywords_en']
+          }
+        }
+      });
+
+      const text = res.text || '{}';
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("translateProductAI failed:", err);
+      return {
+        name_en: name,
+        slug_en: (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+        description_en: description,
+        seoarticle_en: seoarticle,
+        seotitle_en: seoTitle || '',
+        seodescription_en: seoDescription || '',
+        keywords_en: keywords || ''
+      };
+    }
+  }
+
+  async function translatePageAI(ai: any, title: string, content: string, seoTitle: string, seoDescription: string) {
+    try {
+      const res = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: `Translate the following Indonesian custom page content and SEO attributes into natural English.
+  CRITICAL: Maintain any lists, HTML tags, and references EXACTLY as in Indonesian.
+
+  ORIGINAL PAGE CONTENT:
+  Title: "${title}"
+  Content: ${content}
+  SEO Title: "${seoTitle || ''}"
+  SEO Description: "${seoDescription || ''}"`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title_en: { type: Type.STRING },
+              slug_en: { type: Type.STRING },
+              content_en: { type: Type.STRING },
+              seotitle_en: { type: Type.STRING },
+              seodescription_en: { type: Type.STRING }
+            },
+            required: ['title_en', 'slug_en', 'content_en', 'seotitle_en', 'seodescription_en']
+          }
+        }
+      });
+
+      const text = res.text || '{}';
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("translatePageAI failed:", err);
+      return {
+        title_en: title,
+        slug_en: (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+        content_en: content,
+        seotitle_en: seoTitle || '',
+        seodescription_en: seoDescription || ''
+      };
+    }
+  }
+
+  async function runDatabaseTranslationMigration() {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.log("Translation migration skipped: GEMINI_API_KEY not configured.");
+      return;
+    }
+
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
+
+    try {
+      // 1. Migrate posts
+      const { rows: unmigratedPosts } = await pool.query(
+        "SELECT * FROM posts WHERE title_en IS NULL OR title_en = '' OR title_en = ' '"
+      );
+      if (unmigratedPosts.length > 0) {
+        console.log(`Found ${unmigratedPosts.length} posts without English translation. Migrating via Gemini...`);
+        for (const post of unmigratedPosts) {
+          try {
+            console.log(`Translating post: ${post.title}`);
+            const trans = await translatePostAI(ai, post.title, post.content || '', post.seotitle || '', post.seodescription || '', post.keywords || '');
+            if (trans) {
+              await pool.query(
+                `UPDATE posts SET title_en = $2, slug_en = $3, content_en = $4, seotitle_en = $5, seodescription_en = $6, keywords_en = $7 WHERE id = $1`,
+                [post.id, trans.title_en, trans.slug_en, trans.content_en, trans.seotitle_en, trans.seodescription_en, trans.keywords_en]
+              );
+            }
+          } catch (err) {
+            console.error(`Failed to migrate post ${post.id}:`, err);
+          }
+        }
+      }
+
+      // 2. Migrate products
+      const { rows: unmigratedProducts } = await pool.query(
+        "SELECT * FROM products WHERE name_en IS NULL OR name_en = '' OR name_en = ' '"
+      );
+      if (unmigratedProducts.length > 0) {
+        console.log(`Found ${unmigratedProducts.length} products without English translation. Migrating via Gemini...`);
+        for (const prod of unmigratedProducts) {
+          try {
+            console.log(`Translating product: ${prod.name}`);
+            const trans = await translateProductAI(ai, prod.name, prod.description || '', prod.seoarticle || '', prod.seotitle || '', prod.seodescription || '', prod.keywords || '');
+            if (trans) {
+              await pool.query(
+                `UPDATE products SET name_en = $2, slug_en = $3, description_en = $4, seoarticle_en = $5, seotitle_en = $6, seodescription_en = $7, keywords_en = $8 WHERE id = $1`,
+                [prod.id, trans.name_en, trans.slug_en, trans.description_en, trans.seoarticle_en, trans.seotitle_en, trans.seodescription_en, trans.keywords_en]
+              );
+            }
+          } catch (err) {
+            console.error(`Failed to migrate product ${prod.id}:`, err);
+          }
+        }
+      }
+
+      // 3. Migrate pages
+      const { rows: unmigratedPages } = await pool.query(
+        "SELECT * FROM pages WHERE title_en IS NULL OR title_en = '' OR title_en = ' '"
+      );
+      if (unmigratedPages.length > 0) {
+        console.log(`Found ${unmigratedPages.length} pages without English translation. Migrating via Gemini...`);
+        for (const page of unmigratedPages) {
+          try {
+            console.log(`Translating page: ${page.title}`);
+            const trans = await translatePageAI(ai, page.title, page.content || '', page.seotitle || '', page.seodescription || '');
+            if (trans) {
+              await pool.query(
+                `UPDATE pages SET title_en = $2, slug_en = $3, content_en = $4, seotitle_en = $5, seodescription_en = $6 WHERE id = $1`,
+                [page.id, trans.title_en, trans.slug_en, trans.content_en, trans.seotitle_en, trans.seodescription_en]
+              );
+            }
+          } catch (err) {
+            console.error(`Failed to migrate page ${page.id}:`, err);
+          }
+        }
+      }
+
+      console.log("Bilingual dataset migration check complete.");
+    } catch (err) {
+      console.error("Database translation migration failed:", err);
+    }
+  }
+
   app.use(express.json());
+
+  // AI Article Generator using Gemini API
+  app.post('/api/posts/generate-ai', async (req, res) => {
+    try {
+      const { keyword, companyName, whatsappUrl } = req.body;
+      if (!keyword) {
+        return res.status(400).json({ error: 'Keyword utama harus diisi.' });
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: 'Server tidak terkonfigurasi dengan GEMINI_API_KEY.' });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const systemInstruction = `Anda adalah penulis SEO profesional dan editor konten Google Search yang memahami SEO modern (2026), EEAT, Semantic SEO, Helpful Content, dan Search Intent.
+Anda harus menggenerasi artikel berbahasa Indonesia yang matang, komprehensif, natural, menarik pembaca, dan sempurna untuk mesin pencari Google.`;
+
+      const prompt = `Buat artikel komprehensif dengan rincian berikut:
+
+KEYWORD UTAMA:
+"${keyword}"
+
+NAMA PERUSAHAAN:
+"${companyName || 'PT Panca Prima Wijaya'}"
+
+LINK WHATSAPP:
+"${whatsappUrl || 'https://wa.me/6221xxxxxx'}"
+
+PANJANG ARTIKEL:
+- Minimal 2.000 kata (ideal 2.000-3.000 kata)
+- Konten harus berbobot, detail, mengulas topik secara mendalam, informatif, natural, dan tidak ada kalimat yang bertele-tele atau pengulangan kata yang tidak perlu.
+
+STRUKTUR SEO & HTML:
+1. title (H1): Harus mengandung keyword utama, diletakkan sedekat mungkin ke awal judul (maksimal 60 karakter). Judul harus sangat menarik untuk meningkatkan CTR klik pencarian.
+2. seoTitle (Meta Title): 50-60 karakter, mengandung keyword utama, persuasif untuk diklik.
+3. seoDescription (Meta Description): 140-160 karakter, mengandung keyword utama dan menyertakan Call to Action (CTA) yang menarik.
+4. slug (URL Slug): Slug URL yang pendek dan deskriptif, maksimal 8 kata, huruf kecil semua (lowercase), mengandung keyword utama, dipisahkan dengan tanda hubung (-) saja tanpa karakter khusus.
+5. keywords (Focus Keyword): Tulis focus keyword utama secara tepat.
+6. fullContent (Artikel Lengkap):
+   - Artikel harus diawali dengan paragraf pembuka yang menarik (kurang dari 3 paragraf, keyword utama harus muncul dalam 100 kata pertama).
+   - Minimal memiliki 6 Heading 2 (tag <h2>), yang tersebar merata di seluruh artikel. Salah satu Heading 2 harus menyertakan kata kunci utama.
+   - Gunakan Heading 3 (tag <h3>) untuk rincian atau sublevel pembahasan di bawah H2.
+   - Tulis secara mendalam dengan membaginya ke dalam paragraf pendek (maksimal 3 kalimat per paragraf) untuk kenyamanan baca (keterbacaan pengguna ponsel/mobile).
+   - Gunakan bullet points (<ul> & <li>) atau numbering (<ol> & <li>) untuk list informasi yang relevan.
+   - Buat minimal 1 TABEL DATA (tag <table>, <thead>, <tbody>, dll.) dengan visualisasi data numerik atau spesifikasi teknis industri yang relevan dengan topik ini.
+   - Selipkan Call to Action (CTA) yang natural dan menarik untuk menghubungi Perusahaan ("${companyName || 'PT Panca Prima Wijaya'}") melalui link WhatsApp ("${whatsappUrl || 'https://wa.me/6221xxxxxx'}") di dua tempat:
+     * 1) Di tengah-tengah pembahasan artikel (misalnya setelah H2 kedua atau ketiga).
+     * 2) Di bagian penutup artikel sebagai paragraf penutup (yang berisi keyword utama secara alami).
+   - EEAT (Experience, Expertise, Authoritativeness, Trustworthiness):
+     * [Experience]: Berikan contoh proyek atau simulasi kasus operasional nyata di lapangan oleh tim teknisi profesional PT Panca Prima Wijaya yang relevan dengan keyword utama.
+     * [Expertise]: Gunakan terminologi industri atau penjelasan metode teknis yang mendalam dan berbobot ilmiah.
+     * [Authoritativeness]: Cantumkan fakta standar industri (seperti pedoman EPA, WHO, Kementerian Pertanian, dsb).
+     * [Trustworthiness]: Hindari klaim bombastis yang berlebihan; sampaikan informasi secara transparan dan akurat.
+   - SEMANTIC SEO: Sertakan kata kunci turunan, sinonim, istilah industri terkait, serta konsep-konsep seputar keyword utama guna membangun konteks yang komprehensif bagi mesin bot Google.
+   - INTERNAL LINKING: Berikan minimal 5 rekomendasi internal link yang relevan dengan format tautan HTML lengkap (misal link ke layanan, produk, atau blog lain seperti: <a href="/layanan">Layanan Kami</a>, <a href="/tentang-kami">Tentang Kami</a>, <a href="/blog">Blog Utama</a>, atau slug produk/blog yang logis). Pastikan disisipkan secara natural ke dalam jalannya kalimat artikel.
+   - EXTERNAL LINKING: Sediakan minimal 2 referensi eksternal otoritatif (misalnya link ke lembaga standar internasional/nasional, WHO atau jurnal akademis, dalam format tautan <a href="https://example.org" target="_blank" rel="noopener noreferrer">) untuk meningkatkan kredibilitas artikel di mata Google.
+   - FAQ: Sisipkan minimal 5 daftar FAQ (Frequently Asked Questions) di bagian akhir artikel, menggunakan struktur heading <h3> untuk pertanyaan dan paragraf untuk jawaban yang komprehensif.
+
+Keluaran atau output dari model HARUS berupa objek JSON utuh yang bersih sesuai dengan skema JSON berikut (tidak mengandung teks pendahuluan atau penutup di luar blok JSON, murni JSON):
+{
+  "title": "...",
+  "seoTitle": "...",
+  "seoDescription": "...",
+  "slug": "...",
+  "keywords": "...",
+  "fullContent": "..."
+}`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              seoTitle: { type: Type.STRING },
+              seoDescription: { type: Type.STRING },
+              slug: { type: Type.STRING },
+              keywords: { type: Type.STRING },
+              fullContent: { type: Type.STRING }
+            },
+            required: ['title', 'seoTitle', 'seoDescription', 'slug', 'keywords', 'fullContent']
+          }
+        }
+      });
+
+      const resultText = response.text;
+      if (!resultText) {
+        throw new Error('Tidak ada respon teks dari model AI.');
+      }
+
+      const articleData = JSON.parse(resultText);
+      res.json(articleData);
+    } catch (e: any) {
+      console.error('Error generating AI article:', e);
+      res.status(500).json({ error: e.message || 'Gagal menghasilkan artikel dengan AI.' });
+    }
+  });
+
+  // Dynamic Translation API powered by Gemini Flash
+  app.post('/api/translate', async (req, res) => {
+    try {
+      const { text, targetLang } = req.body;
+      if (!text || text.trim() === '') {
+        return res.json({ translatedText: '' });
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.json({ translatedText: text, notice: 'No API key configured' });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `You are an expert content translator. Translate the following text into natural, professional ${targetLang || 'English'} suitable for web display.
+CRITICAL:
+1. Preserve all HTML structure, inline styles, IDs, anchor attributes (<a href="...">), and tags EXACTLY.
+2. Only translate the human-readable text contents. Do not translate URL coordinates or path parameters (e.g. keep "/sensor" as "/sensor" or change according to local language path if it matches custom routes).
+3. Do not wrap the output in markdown code blocks like \`\`\`html. Return ONLY the translated content.
+4. Maintain exact formatting, line breaks, and whitespace.
+
+Text to translate:
+${text}`
+      });
+
+      const resultText = response.text || '';
+      res.json({ translatedText: resultText.trim() });
+    } catch (e: any) {
+      console.error('Error in translate API:', e);
+      res.status(500).json({ error: e.message || 'Translation failed' });
+    }
+  });
 
   // API Settings & Page Builder
   app.get('/api/settings/home', async (req, res) => {
@@ -223,7 +642,7 @@ async function startServer() {
 
   app.get('/api/posts/:identifier', async (req, res) => {
     try {
-      const { rows } = await pool.query('SELECT * FROM posts WHERE slug = $1 OR id = $1', [req.params.identifier]);
+      const { rows } = await pool.query('SELECT * FROM posts WHERE slug = $1 OR slug_en = $1 OR id = $1', [req.params.identifier]);
       rows.length > 0 ? res.json(rows[0]) : res.status(404).json({ error: 'Post Not found' });
     } catch (e) {
       console.error(e);
@@ -235,9 +654,36 @@ async function startServer() {
     try {
       const id = 'P-' + Date.now().toString();
       const b = req.body;
+
+      let title_en = '';
+      let slug_en = '';
+      let content_en = '';
+      let seotitle_en = '';
+      let seodescription_en = '';
+      let keywords_en = '';
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (apiKey) {
+        try {
+          const ai = new GoogleGenAI({
+            apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+          });
+          const trans = await translatePostAI(ai, b.title, b.content || '', b.seoTitle || b.seotitle || '', b.seoDescription || b.seodescription || '', b.keywords || '');
+          title_en = trans.title_en;
+          slug_en = trans.slug_en;
+          content_en = trans.content_en;
+          seotitle_en = trans.seotitle_en;
+          seodescription_en = trans.seodescription_en;
+          keywords_en = trans.keywords_en;
+        } catch (err) {
+          console.error("Write-time post translation failed:", err);
+        }
+      }
+
       const { rows } = await pool.query(
-        'INSERT INTO posts (id, title, slug, content, seotitle, seodescription, keywords, featuredimage, site, canonical, robots, ogtitle, ogdescription, ogimage, twittercard, category, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *',
-        [id, b.title, b.slug, b.content, b.seoTitle, b.seoDescription, b.keywords, b.featuredImage, b.site, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish']
+        'INSERT INTO posts (id, title, slug, content, seotitle, seodescription, keywords, featuredimage, site, canonical, robots, ogtitle, ogdescription, ogimage, twittercard, category, status, title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING *',
+        [id, b.title, b.slug, b.content, b.seoTitle, b.seoDescription, b.keywords, b.featuredImage, b.site, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en]
       );
       res.status(201).json(rows[0]);
     } catch (e) {
@@ -249,9 +695,36 @@ async function startServer() {
   app.put('/api/posts/:id', async (req, res) => {
     try {
       const b = req.body;
+
+      let title_en = b.title_en || '';
+      let slug_en = b.slug_en || '';
+      let content_en = b.content_en || '';
+      let seotitle_en = b.seotitle_en || '';
+      let seodescription_en = b.seodescription_en || '';
+      let keywords_en = b.keywords_en || '';
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (apiKey && !title_en) {
+        try {
+          const ai = new GoogleGenAI({
+            apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+          });
+          const trans = await translatePostAI(ai, b.title, b.content || '', b.seoTitle || b.seotitle || '', b.seoDescription || b.seodescription || '', b.keywords || '');
+          title_en = trans.title_en;
+          slug_en = trans.slug_en;
+          content_en = trans.content_en;
+          seotitle_en = trans.seotitle_en;
+          seodescription_en = trans.seodescription_en;
+          keywords_en = trans.keywords_en;
+        } catch (err) {
+          console.error("Write-time post update translation failed:", err);
+        }
+      }
+
       const { rows } = await pool.query(
-        'UPDATE posts SET title = $2, slug = $3, content = $4, seotitle = $5, seodescription = $6, keywords = $7, featuredimage = $8, site = $9, canonical = $10, robots = $11, ogtitle = $12, ogdescription = $13, ogimage = $14, twittercard = $15, category = $16, status = $17, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-        [req.params.id, b.title, b.slug, b.content, b.seoTitle, b.seoDescription, b.keywords, b.featuredImage, b.site, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish']
+        'UPDATE posts SET title = $2, slug = $3, content = $4, seotitle = $5, seodescription = $6, keywords = $7, featuredimage = $8, site = $9, canonical = $10, robots = $11, ogtitle = $12, ogdescription = $13, ogimage = $14, twittercard = $15, category = $16, status = $17, title_en = $18, slug_en = $19, content_en = $20, seotitle_en = $21, seodescription_en = $22, keywords_en = $23, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+        [req.params.id, b.title, b.slug, b.content, b.seoTitle, b.seoDescription, b.keywords, b.featuredImage, b.site, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en]
       );
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
     } catch (e) {
@@ -283,7 +756,7 @@ async function startServer() {
 
   app.get('/api/pages/:identifier', async (req, res) => {
     try {
-      const { rows } = await pool.query('SELECT * FROM pages WHERE id = $1 OR slug = $1 LIMIT 1', [req.params.identifier]);
+      const { rows } = await pool.query('SELECT * FROM pages WHERE id = $1 OR slug = $1 OR slug_en = $1 LIMIT 1', [req.params.identifier]);
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
     } catch (e) {
       console.error(e);
@@ -295,9 +768,34 @@ async function startServer() {
     try {
       const id = 'PG-' + Date.now().toString();
       const b = req.body;
+
+      let title_en = '';
+      let slug_en = '';
+      let content_en = '';
+      let seotitle_en = '';
+      let seodescription_en = '';
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (apiKey) {
+        try {
+          const ai = new GoogleGenAI({
+            apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+          });
+          const trans = await translatePageAI(ai, b.title, b.content || '', b.seotitle || '', b.seodescription || '');
+          title_en = trans.title_en;
+          slug_en = trans.slug_en;
+          content_en = trans.content_en;
+          seotitle_en = trans.seotitle_en;
+          seodescription_en = trans.seodescription_en;
+        } catch (err) {
+          console.error("Write-time page translation failed:", err);
+        }
+      }
+
       const { rows } = await pool.query(
-        'INSERT INTO pages (id, title, slug, content, seotitle, seodescription, image, canonical, robots, ogtitle, ogdescription, ogimage, twittercard, category, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *',
-        [id, b.title, b.slug, b.content, b.seotitle, b.seodescription, b.image, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish']
+        'INSERT INTO pages (id, title, slug, content, seotitle, seodescription, image, canonical, robots, ogtitle, ogdescription, ogimage, twittercard, category, status, title_en, slug_en, content_en, seotitle_en, seodescription_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *',
+        [id, b.title, b.slug, b.content, b.seotitle, b.seodescription, b.image, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en]
       );
       res.status(201).json(rows[0]);
     } catch (e) {
@@ -309,9 +807,34 @@ async function startServer() {
   app.put('/api/pages/:id', async (req, res) => {
     try {
       const b = req.body;
+
+      let title_en = b.title_en || '';
+      let slug_en = b.slug_en || '';
+      let content_en = b.content_en || '';
+      let seotitle_en = b.seotitle_en || '';
+      let seodescription_en = b.seodescription_en || '';
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (apiKey && !title_en) {
+        try {
+          const ai = new GoogleGenAI({
+            apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+          });
+          const trans = await translatePageAI(ai, b.title, b.content || '', b.seotitle || '', b.seodescription || '');
+          title_en = trans.title_en;
+          slug_en = trans.slug_en;
+          content_en = trans.content_en;
+          seotitle_en = trans.seotitle_en;
+          seodescription_en = trans.seodescription_en;
+        } catch (err) {
+          console.error("Write-time page update translation failed:", err);
+        }
+      }
+
       const { rows } = await pool.query(
-        'UPDATE pages SET title = $2, slug = $3, content = $4, seotitle = $5, seodescription = $6, image = $7, canonical = $8, robots = $9, ogtitle = $10, ogdescription = $11, ogimage = $12, twittercard = $13, category = $14, status = $15, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-        [req.params.id, b.title, b.slug, b.content, b.seotitle, b.seodescription, b.image, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish']
+        'UPDATE pages SET title = $2, slug = $3, content = $4, seotitle = $5, seodescription = $6, image = $7, canonical = $8, robots = $9, ogtitle = $10, ogdescription = $11, ogimage = $12, twittercard = $13, category = $14, status = $15, title_en = $16, slug_en = $17, content_en = $18, seotitle_en = $19, seodescription_en = $20, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+        [req.params.id, b.title, b.slug, b.content, b.seotitle, b.seodescription, b.image, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en]
       );
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
     } catch (e) {
@@ -350,7 +873,7 @@ async function startServer() {
 
   app.get('/api/products/:identifier', async (req, res) => {
     try {
-      const { rows } = await pool.query('SELECT * FROM products WHERE slug = $1 OR id = $1', [req.params.identifier]);
+      const { rows } = await pool.query('SELECT * FROM products WHERE slug = $1 OR slug_en = $1 OR id = $1', [req.params.identifier]);
       rows.length > 0 ? res.json(rows[0]) : res.status(404).json({ error: 'Product Not found' });
     } catch (e) {
       console.error(e);
@@ -362,9 +885,38 @@ async function startServer() {
     try {
       const id = 'PROD-' + Date.now().toString();
       const b = req.body;
+
+      let name_en = '';
+      let slug_en = '';
+      let description_en = '';
+      let seoarticle_en = '';
+      let seotitle_en = '';
+      let seodescription_en = '';
+      let keywords_en = '';
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (apiKey) {
+        try {
+          const ai = new GoogleGenAI({
+            apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+          });
+          const trans = await translateProductAI(ai, b.name, b.description || '', b.seoArticle || b.seoarticle || '', b.seoTitle || b.seotitle || '', b.seoDescription || b.seodescription || '', b.keywords || '');
+          name_en = trans.name_en;
+          slug_en = trans.slug_en;
+          description_en = trans.description_en;
+          seoarticle_en = trans.seoarticle_en;
+          seotitle_en = trans.seotitle_en;
+          seodescription_en = trans.seodescription_en;
+          keywords_en = trans.keywords_en;
+        } catch (err) {
+          console.error("Write-time product translation failed:", err);
+        }
+      }
+
       const { rows } = await pool.query(
-        'INSERT INTO products (id, name, slug, price, category, image, gallery, description, seotitle, seodescription, keywords, site) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *',
-        [id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoTitle, b.seoDescription, b.keywords, b.site]
+        'INSERT INTO products (id, name, slug, price, category, image, gallery, description, seoarticle, seotitle, seodescription, keywords, site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *',
+        [id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en]
       );
       res.status(201).json(rows[0]);
     } catch (e) {
@@ -376,9 +928,38 @@ async function startServer() {
   app.put('/api/products/:id', async (req, res) => {
     try {
       const b = req.body;
+
+      let name_en = b.name_en || '';
+      let slug_en = b.slug_en || '';
+      let description_en = b.description_en || '';
+      let seoarticle_en = b.seoarticle_en || '';
+      let seotitle_en = b.seotitle_en || '';
+      let seodescription_en = b.seodescription_en || '';
+      let keywords_en = b.keywords_en || '';
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (apiKey && !name_en) {
+        try {
+          const ai = new GoogleGenAI({
+            apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+          });
+          const trans = await translateProductAI(ai, b.name, b.description || '', b.seoArticle || b.seoarticle || '', b.seoTitle || b.seotitle || '', b.seoDescription || b.seodescription || '', b.keywords || '');
+          name_en = trans.name_en;
+          slug_en = trans.slug_en;
+          description_en = trans.description_en;
+          seoarticle_en = trans.seoarticle_en;
+          seotitle_en = trans.seotitle_en;
+          seodescription_en = trans.seodescription_en;
+          keywords_en = trans.keywords_en;
+        } catch (err) {
+          console.error("Write-time product update translation failed:", err);
+        }
+      }
+
       const { rows } = await pool.query(
-        'UPDATE products SET name = $2, slug = $3, price = $4, category = $5, image = $6, gallery = $7, description = $8, seotitle = $9, seodescription = $10, keywords = $11, site = $12, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-        [req.params.id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoTitle, b.seoDescription, b.keywords, b.site]
+        'UPDATE products SET name = $2, slug = $3, price = $4, category = $5, image = $6, gallery = $7, description = $8, seoarticle = $9, seotitle = $10, seodescription = $11, keywords = $12, site = $13, name_en = $14, slug_en = $15, description_en = $16, seoarticle_en = $17, seotitle_en = $18, seodescription_en = $19, keywords_en = $20, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+        [req.params.id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en]
       );
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
     } catch (e) {
@@ -658,47 +1239,55 @@ async function startServer() {
 </urlset>`.trim();
 
   // --- SENSOR SITEMAPS ---
-  app.get('/sensor/page-sitemap.xml', async (req, res) => {
+  app.get(['/sensor/page-sitemap.xml', '/en/sensor/page-sitemap.xml'], async (req, res) => {
+    const isEn = req.path.startsWith('/en');
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+    const pfx = isEn ? '/en' : '';
     const urls = [
-      `${baseUrl}/sensor`,
-      `${baseUrl}/sensor/produk`,
-      `${baseUrl}/sensor/building-management-system`,
-      `${baseUrl}/sensor/early-warning-system`,
-      `${baseUrl}/sensor/real-time-monitoring-system-rtms`,
-      `${baseUrl}/sensor/sensor-gempa`,
-      `${baseUrl}/sensor/sparepart-lift-terlengkap`
+      `${baseUrl}${pfx}/sensor`,
+      `${baseUrl}${pfx}/sensor/produk`,
+      `${baseUrl}${pfx}/sensor/building-management-system`,
+      `${baseUrl}${pfx}/sensor/early-warning-system`,
+      `${baseUrl}${pfx}/sensor/real-time-monitoring-system-rtms`,
+      `${baseUrl}${pfx}/sensor/sensor-gempa`,
+      `${baseUrl}${pfx}/sensor/sparepart-lift-terlengkap`
     ];
     try {
-      const { rows } = await pool.query('SELECT slug FROM pages');
-      urls.push(...rows.map(r => `${baseUrl}/${r.slug}`));
+      const { rows } = await pool.query('SELECT slug, slug_en FROM pages');
+      urls.push(...rows.map(r => `${baseUrl}${pfx}/${isEn && r.slug_en ? r.slug_en : r.slug}`));
     } catch (e) {}
     res.header('Content-Type', 'application/xml');
     res.send(generateUrlset(urls));
   });
 
-  app.get('/sensor/produk-sitemap.xml', async (req, res) => {
+  app.get(['/sensor/produk-sitemap.xml', '/en/sensor/produk-sitemap.xml'], async (req, res) => {
+    const isEn = req.path.startsWith('/en');
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+    const pfx = isEn ? '/en' : '';
     try {
-      const { rows } = await pool.query("SELECT slug FROM products WHERE site = 'sensor' OR category ILIKE '%sensor%'");
-      const urls = rows.map(r => `${baseUrl}/sensor/produk/${r.slug}`);
+      const { rows } = await pool.query("SELECT slug, slug_en FROM products WHERE site = 'sensor' OR category ILIKE '%sensor%'");
+      const urls = rows.map(r => `${baseUrl}${pfx}/sensor/produk/${isEn && r.slug_en ? r.slug_en : r.slug}`);
       res.header('Content-Type', 'application/xml');
       res.send(generateUrlset(urls));
     } catch(e) { res.status(500).send(''); }
   });
 
-  app.get('/sensor/blog-sitemap.xml', async (req, res) => {
+  app.get(['/sensor/blog-sitemap.xml', '/en/sensor/blog-sitemap.xml'], async (req, res) => {
+    const isEn = req.path.startsWith('/en');
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+    const pfx = isEn ? '/en' : '';
     try {
-      const { rows } = await pool.query('SELECT slug FROM posts');
-      const urls = rows.map(r => `${baseUrl}/blog/${r.slug}`);
+      const { rows } = await pool.query('SELECT slug, slug_en FROM posts');
+      const urls = rows.map(r => `${baseUrl}${pfx}/blog/${isEn && r.slug_en ? r.slug_en : r.slug}`);
       res.header('Content-Type', 'application/xml');
       res.send(generateUrlset(urls));
     } catch(e) { res.status(500).send(''); }
   });
 
-  app.get('/sensor/kategori-sitemap.xml', async (req, res) => {
+  app.get(['/sensor/kategori-sitemap.xml', '/en/sensor/kategori-sitemap.xml'], async (req, res) => {
+    const isEn = req.path.startsWith('/en');
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+    const pfx = isEn ? '/en' : '';
     try {
       const { rows: postCats } = await pool.query("SELECT category FROM posts WHERE category IS NOT NULL AND category != ''");
       const { rows: pageCats } = await pool.query("SELECT category FROM pages WHERE category IS NOT NULL AND category != ''");
@@ -710,54 +1299,62 @@ async function startServer() {
       });
       allCats.delete('');
       
-      const urls = Array.from(allCats).map(c => `${baseUrl}/sensor/kategori/${encodeURIComponent(c as string)}`);
+      const urls = Array.from(allCats).map(c => `${baseUrl}${pfx}/sensor/kategori/${encodeURIComponent(c as string)}`);
       res.header('Content-Type', 'application/xml');
       res.send(generateUrlset(urls));
     } catch(e) { res.status(500).send(''); }
   });
 
   // --- PANCA SITEMAPS ---
-  app.get('/panca/page-sitemap.xml', async (req, res) => {
+  app.get(['/panca/page-sitemap.xml', '/en/panca/page-sitemap.xml'], async (req, res) => {
+    const isEn = req.path.startsWith('/en');
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+    const pfx = isEn ? '/en' : '';
     const urls = [
-      `${baseUrl}/`,
-      `${baseUrl}/panca`,
-      `${baseUrl}/panca/produk`,
-      `${baseUrl}/katalog`,
-      `${baseUrl}/blog`,
-      `${baseUrl}/layanan`,
-      `${baseUrl}/tentang-kami`
+      `${baseUrl}${pfx === '' ? '/' : pfx}`,
+      `${baseUrl}${pfx}/panca`,
+      `${baseUrl}${pfx}/panca/produk`,
+      `${baseUrl}${pfx}/katalog`,
+      `${baseUrl}${pfx}/blog`,
+      `${baseUrl}${pfx}/layanan`,
+      `${baseUrl}${pfx}/tentang-kami`
     ];
     try {
-      const { rows } = await pool.query('SELECT slug FROM pages');
-      urls.push(...rows.map(r => `${baseUrl}/${r.slug}`));
+      const { rows } = await pool.query('SELECT slug, slug_en FROM pages');
+      urls.push(...rows.map(r => `${baseUrl}${pfx}/${isEn && r.slug_en ? r.slug_en : r.slug}`));
     } catch (e) {}
     res.header('Content-Type', 'application/xml');
     res.send(generateUrlset(urls));
   });
 
-  app.get('/panca/produk-sitemap.xml', async (req, res) => {
+  app.get(['/panca/produk-sitemap.xml', '/en/panca/produk-sitemap.xml'], async (req, res) => {
+    const isEn = req.path.startsWith('/en');
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+    const pfx = isEn ? '/en' : '';
     try {
-      const { rows } = await pool.query("SELECT slug FROM products WHERE site = 'panca' OR site IS NULL");
-      const urls = rows.map(r => `${baseUrl}/panca/produk/${r.slug}`);
+      const { rows } = await pool.query("SELECT slug, slug_en FROM products WHERE site = 'panca' OR site IS NULL");
+      const urls = rows.map(r => `${baseUrl}${pfx}/panca/produk/${isEn && r.slug_en ? r.slug_en : r.slug}`);
       res.header('Content-Type', 'application/xml');
       res.send(generateUrlset(urls));
     } catch(e) { res.status(500).send(''); }
   });
 
-  app.get('/panca/blog-sitemap.xml', async (req, res) => {
+  app.get(['/panca/blog-sitemap.xml', '/en/panca/blog-sitemap.xml'], async (req, res) => {
+    const isEn = req.path.startsWith('/en');
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+    const pfx = isEn ? '/en' : '';
     try {
-      const { rows } = await pool.query('SELECT slug FROM posts');
-      const urls = rows.map(r => `${baseUrl}/blog/${r.slug}`);
+      const { rows } = await pool.query('SELECT slug, slug_en FROM posts');
+      const urls = rows.map(r => `${baseUrl}${pfx}/blog/${isEn && r.slug_en ? r.slug_en : r.slug}`);
       res.header('Content-Type', 'application/xml');
       res.send(generateUrlset(urls));
     } catch(e) { res.status(500).send(''); }
   });
 
-  app.get('/panca/kategori-sitemap.xml', async (req, res) => {
+  app.get(['/panca/kategori-sitemap.xml', '/en/panca/kategori-sitemap.xml'], async (req, res) => {
+    const isEn = req.path.startsWith('/en');
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+    const pfx = isEn ? '/en' : '';
     try {
       const { rows: postCats } = await pool.query("SELECT category FROM posts WHERE category IS NOT NULL AND category != ''");
       const { rows: pageCats } = await pool.query("SELECT category FROM pages WHERE category IS NOT NULL AND category != ''");
@@ -769,15 +1366,17 @@ async function startServer() {
       });
       allCats.delete('');
       
-      const urls = Array.from(allCats).map(c => `${baseUrl}/panca/kategori/${encodeURIComponent(c as string)}`);
+      const urls = Array.from(allCats).map(c => `${baseUrl}${pfx}/panca/kategori/${encodeURIComponent(c as string)}`);
       res.header('Content-Type', 'application/xml');
       res.send(generateUrlset(urls));
     } catch(e) { res.status(500).send(''); }
   });
 
   // --- INDEX SITEMAPS ---
-  app.get('/sensor-sitemap.xml', async (req, res) => {
+  app.get(['/sensor-sitemap.xml', '/en/sensor-sitemap.xml'], async (req, res) => {
+    const isEn = req.path.startsWith('/en');
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+    const pfx = isEn ? '/en' : '';
     let productCount = 0;
     let postCount = 0;
     let pageCount = 0;
@@ -808,22 +1407,22 @@ async function startServer() {
       <?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
       <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:custom="http://pancaprimawijaya.com/custom">
         <sitemap>
-          <loc>${baseUrl}/sensor/page-sitemap.xml</loc>
+          <loc>${baseUrl}${pfx}/sensor/page-sitemap.xml</loc>
           <lastmod>${new Date().toISOString()}</lastmod>
           <custom:count>${7 + pageCount}</custom:count>
         </sitemap>
         <sitemap>
-          <loc>${baseUrl}/sensor/blog-sitemap.xml</loc>
+          <loc>${baseUrl}${pfx}/sensor/blog-sitemap.xml</loc>
           <lastmod>${new Date().toISOString()}</lastmod>
           <custom:count>${postCount}</custom:count>
         </sitemap>
         <sitemap>
-          <loc>${baseUrl}/sensor/produk-sitemap.xml</loc>
+          <loc>${baseUrl}${pfx}/sensor/produk-sitemap.xml</loc>
           <lastmod>${new Date().toISOString()}</lastmod>
           <custom:count>${productCount}</custom:count>
         </sitemap>
         <sitemap>
-          <loc>${baseUrl}/sensor/kategori-sitemap.xml</loc>
+          <loc>${baseUrl}${pfx}/sensor/kategori-sitemap.xml</loc>
           <lastmod>${new Date().toISOString()}</lastmod>
           <custom:count>${catCount}</custom:count>
         </sitemap>
@@ -832,8 +1431,10 @@ async function startServer() {
     res.send(sitemap.trim());
   });
 
-  app.get('/panca-sitemap.xml', async (req, res) => {
+  app.get(['/panca-sitemap.xml', '/en/panca-sitemap.xml'], async (req, res) => {
+    const isEn = req.path.startsWith('/en');
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+    const pfx = isEn ? '/en' : '';
     let productCount = 0;
     let postCount = 0;
     let pageCount = 0;
@@ -864,22 +1465,22 @@ async function startServer() {
       <?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
       <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:custom="http://pancaprimawijaya.com/custom">
         <sitemap>
-          <loc>${baseUrl}/panca/page-sitemap.xml</loc>
+          <loc>${baseUrl}${pfx}/panca/page-sitemap.xml</loc>
           <lastmod>${new Date().toISOString()}</lastmod>
           <custom:count>${7 + pageCount}</custom:count>
         </sitemap>
         <sitemap>
-          <loc>${baseUrl}/panca/blog-sitemap.xml</loc>
+          <loc>${baseUrl}${pfx}/panca/blog-sitemap.xml</loc>
           <lastmod>${new Date().toISOString()}</lastmod>
           <custom:count>${postCount}</custom:count>
         </sitemap>
         <sitemap>
-          <loc>${baseUrl}/panca/produk-sitemap.xml</loc>
+          <loc>${baseUrl}${pfx}/panca/produk-sitemap.xml</loc>
           <lastmod>${new Date().toISOString()}</lastmod>
           <custom:count>${productCount}</custom:count>
         </sitemap>
         <sitemap>
-          <loc>${baseUrl}/panca/kategori-sitemap.xml</loc>
+          <loc>${baseUrl}${pfx}/panca/kategori-sitemap.xml</loc>
           <lastmod>${new Date().toISOString()}</lastmod>
           <custom:count>${catCount}</custom:count>
         </sitemap>
@@ -903,9 +1504,30 @@ async function startServer() {
           <lastmod>${new Date().toISOString()}</lastmod>
           <custom:count>4</custom:count>
         </sitemap>
+        <sitemap>
+          <loc>${baseUrl}/en/sensor-sitemap.xml</loc>
+          <lastmod>${new Date().toISOString()}</lastmod>
+          <custom:count>4</custom:count>
+        </sitemap>
+        <sitemap>
+          <loc>${baseUrl}/en/panca-sitemap.xml</loc>
+          <lastmod>${new Date().toISOString()}</lastmod>
+          <custom:count>4</custom:count>
+        </sitemap>
       </sitemapindex>`;
     res.header('Content-Type', 'application/xml');
     res.send(sitemap.trim());
+  });
+
+  // Dynamic robots.txt
+  app.get('/robots.txt', (req, res) => {
+    const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+    res.type('text/plain');
+    res.send(`User-agent: *
+Allow: /
+
+Sitemap: ${baseUrl}/sitemap.xml
+`);
   });
 
   // Vite middleware for development
@@ -926,38 +1548,158 @@ async function startServer() {
         let title = 'PT Panca Prima Wijaya | Pest Control & Sensor Monitoring';
         let description = 'Menyediakan layanan pest control, fumigasi profesional dan solusi sensor monitoring system terbaik di Indonesia.';
         let image = 'https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png';
+        let canonical = `https://${req.get('host') || 'www.pancaprimawijaya.com'}${req.path}`;
+        let robots = 'index, follow';
+        let keywords = 'pest control, fumigasi, sensor monitoring, gas monitoring, fosfin, silofit, sensor';
+        let ogType = 'website';
+        let status = 200;
+        let schemaJson: string | null = null;
+
+        const isEn = req.path.startsWith('/en/') || req.path === '/en';
+        if (isEn) {
+          title = 'PT Panca Prima Wijaya | Pest Control & Sensor Monitoring';
+          description = 'Providing professional pest control, fumigation, and gas sensor monitoring systems in Indonesia.';
+          keywords = 'pest control, fumigation, sensor monitoring, gas monitoring, phosphine, silofit, sensor';
+        }
 
         // Detect route and fetch data
         if (req.path.includes('/blog/')) {
           const slug = req.path.split('/').pop();
           if (slug) {
-            const { rows } = await pool.query('SELECT * FROM posts WHERE slug = $1', [slug]);
+            const { rows } = await pool.query('SELECT * FROM posts WHERE slug = $1 OR slug_en = $1', [slug]);
             if (rows.length > 0) {
-              title = rows[0].seotitle || rows[0].title;
-              description = rows[0].seodescription || rows[0].content?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
-              image = rows[0].ogimage || rows[0].featuredimage || image;
+              const post = rows[0];
+              if (isEn && post.title_en) {
+                title = post.seotitle_en || post.title_en;
+                description = post.seodescription_en || post.content_en?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+                keywords = post.keywords_en || post.keywords || keywords;
+              } else {
+                title = post.seotitle || post.title;
+                description = post.seodescription || post.content?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+                keywords = post.keywords || keywords;
+              }
+              image = post.ogimage || post.featuredimage || image;
+              canonical = post.canonical || canonical;
+              robots = post.robots || robots;
+              ogType = 'article';
+              
+              // Article Schema
+              schemaJson = JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "BlogPosting",
+                "headline": title,
+                "image": [image],
+                "datePublished": post.createdat || new Date().toISOString(),
+                "dateModified": post.updatedat || post.createdat || new Date().toISOString(),
+                "description": description.substring(0, 150),
+                "publisher": {
+                  "@type": "Organization",
+                  "name": "PT Panca Prima Wijaya",
+                  "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png"
+                  }
+                }
+              });
+            } else {
+              status = 404;
+              title = isEn ? 'Page Not Found - PT Panca Prima Wijaya' : 'Halaman Tidak Ditemukan - PT Panca Prima Wijaya';
+              description = isEn ? 'Sorry, the requested article could not be found.' : 'Maaf, artikel atau halaman yang Anda cari tidak dapat ditemukan di server kami.';
             }
           }
         } else if (req.path.includes('/produk/')) {
           const slug = req.path.split('/').pop();
           if (slug) {
-            const { rows } = await pool.query('SELECT * FROM products WHERE slug = $1', [slug]);
+            const { rows } = await pool.query('SELECT * FROM products WHERE slug = $1 OR slug_en = $1', [slug]);
             if (rows.length > 0) {
-              title = rows[0].seotitle || rows[0].name;
-              description = rows[0].seodescription || rows[0].description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
-              image = rows[0].image || image;
+              const prod = rows[0];
+              if (isEn && prod.name_en) {
+                title = prod.seotitle_en || prod.name_en;
+                description = prod.seodescription_en || prod.description_en?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+                keywords = prod.keywords_en || prod.keywords || keywords;
+              } else {
+                title = prod.seotitle || prod.name;
+                description = prod.seodescription || prod.description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+                keywords = prod.keywords || keywords;
+              }
+              image = prod.image || image;
+              ogType = 'product';
+              
+              // Product Schema
+              schemaJson = JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Product",
+                "name": isEn && prod.name_en ? prod.name_en : prod.name,
+                "image": [image],
+                "description": description.substring(0, 150),
+                "offers": {
+                  "@type": "Offer",
+                  "price": prod.price || "0",
+                  "priceCurrency": "IDR",
+                  "availability": "https://schema.org/InStock",
+                  "seller": {
+                    "@type": "Organization",
+                    "name": "PT Panca Prima Wijaya"
+                  }
+                }
+              });
+            } else {
+              status = 404;
+              title = isEn ? 'Product Not Found - PT Panca Prima Wijaya' : 'Produk Tidak Ditemukan - PT Panca Prima Wijaya';
+              description = isEn ? 'Sorry, the requested product could not be found.' : 'Maaf, produk yang Anda cari tidak dapat ditemukan di server kami.';
             }
           }
         } else {
           // Try page
           let slug = req.path.split('/').filter(Boolean).pop() || '';
-          if (slug) {
-            const { rows } = await pool.query('SELECT * FROM pages WHERE slug = $1', [slug]);
+          const knownStaticRoutes = [
+            '', 'en', 'panca', 'sensor', 'layanan', 'blog', 'tentang-kami', 'sensor/produk', 'panca/produk', 'admin-login', 'admin', 'orders', 'cart', 'bms'
+          ];
+          const normalizedPath = req.path.replace(/^\/|\/$/g, '');
+          
+          if (slug && !knownStaticRoutes.includes(normalizedPath)) {
+            const { rows } = await pool.query('SELECT * FROM pages WHERE slug = $1 OR slug_en = $1', [slug]);
             if (rows.length > 0) {
-              title = rows[0].seotitle || rows[0].title;
-              description = rows[0].seodescription || rows[0].content?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
-              image = rows[0].ogimage || rows[0].image || image;
+              const page = rows[0];
+              if (isEn && page.title_en) {
+                title = page.seotitle_en || page.title_en;
+                description = page.seodescription_en || page.content_en?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+              } else {
+                title = page.seotitle || page.title;
+                description = page.seodescription || page.content?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+              }
+              image = page.ogimage || page.image || image;
+              canonical = page.canonical || canonical;
+              robots = page.robots || robots;
+              
+              // WebPage Schema
+              schemaJson = JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "WebPage",
+                "name": title,
+                "description": description.substring(0, 150),
+                "url": canonical
+              });
+            } else {
+              status = 404;
+              title = isEn ? 'Page Not Found - PT Panca Prima Wijaya' : 'Halaman Tidak Ditemukan - PT Panca Prima Wijaya';
+              description = isEn ? 'Sorry, the requested page could not be found.' : 'Maaf, halaman yang Anda cari tidak dapat ditemukan di server kami.';
             }
+          } else {
+            // Default Organization Schema
+            schemaJson = JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "PT Panca Prima Wijaya",
+              "alternateName": "SensorGempa",
+              "url": "https://pancaprimawijaya.com",
+              "logo": "https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png",
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "telephone": "+62-21-xxxxxx",
+                "contactType": "customer service"
+              }
+            });
           }
         }
 
@@ -965,22 +1707,34 @@ async function startServer() {
         description = description.replace(/"/g, '&quot;');
 
         html = html.replace(/<title>(.*?)<\/title>/, `<title>${title}</title>`);
-        const metaTags = `
+        let metaTags = `
           <meta name="description" content="${description}" />
+          <meta name="keywords" content="${keywords}" />
+          <link rel="canonical" href="${canonical}" />
+          <meta name="robots" content="${robots}" />
           <meta property="og:title" content="${title}" />
           <meta property="og:description" content="${description}" />
           <meta property="og:image" content="${image}" />
+          <meta property="og:url" content="${canonical}" />
+          <meta property="og:type" content="${ogType}" />
           <meta name="twitter:card" content="summary_large_image" />
           <meta name="twitter:title" content="${title}" />
           <meta name="twitter:description" content="${description}" />
           <meta name="twitter:image" content="${image}" />
         `;
+        if (schemaJson) {
+          metaTags += `
+          <script type="application/ld+json">
+            ${schemaJson}
+          </script>
+          `;
+        }
         html = html.replace('</head>', `${metaTags}</head>`);
         
-        res.send(html);
+        res.status(status).send(html);
       } catch (e) {
         // Fallback
-        res.sendFile(path.join(distPath, 'index.html'));
+        res.status(500).sendFile(path.join(distPath, 'index.html'));
       }
     });
   }

@@ -15,6 +15,11 @@ export interface Page {
   category?: string;
   status?: string;
   createdat: string;
+  title_en?: string;
+  slug_en?: string;
+  content_en?: string;
+  seotitle_en?: string;
+  seodescription_en?: string;
 }
 
 export interface Post {
@@ -36,6 +41,12 @@ export interface Post {
   status?: string;
   createdat: string;
   site?: 'panca' | 'sensor';
+  title_en?: string;
+  slug_en?: string;
+  content_en?: string;
+  seotitle_en?: string;
+  seodescription_en?: string;
+  keywords_en?: string;
 }
 
 export interface Product {
@@ -47,10 +58,18 @@ export interface Product {
   image: string;
   gallery?: string[];
   description: string;
+  seoArticle?: string;
   seoTitle?: string;
   seoDescription?: string;
   keywords?: string;
   site?: 'panca' | 'sensor';
+  name_en?: string;
+  slug_en?: string;
+  description_en?: string;
+  seoarticle_en?: string;
+  seotitle_en?: string;
+  seodescription_en?: string;
+  keywords_en?: string;
 }
 
 export interface BlockStyle {
