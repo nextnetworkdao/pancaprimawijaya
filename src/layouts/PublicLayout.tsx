@@ -110,43 +110,51 @@ export function PublicLayout() {
         <main className="flex-1 flex flex-col justify-start">
           {isShopPage ? (
             <div className="bg-[#f8fafc] w-full flex-1 flex flex-col justify-start pb-16">
-              <div className="max-w-md w-full mx-auto bg-white min-h-[calc(100vh-80px)] shadow-lg border-x border-gray-100 flex flex-col justify-between relative">
+              <div className="max-w-7xl w-full mx-auto bg-white min-h-[calc(100vh-80px)] shadow-lg border-x border-gray-100 flex flex-col justify-between relative animate-fade-in">
                 <div className="flex-1">
                   <Outlet />
                 </div>
                 
-                {/* Fixed/Sticky Bottom App Navigation Bar */}
-                <div className="sticky bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 py-2.5 flex justify-around items-center w-full shadow-lg">
+                {/* Fixed Bottom App Navigation Bar */}
+                <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 py-2.5 flex justify-around items-center w-full max-w-7xl mx-auto shadow-[0_-4px_12px_rgba(0,0,0,0.08)] border-x">
                   <Link 
-                    to={langLink(site === 'sensor' ? '/sensor' : '/panca')}
-                    className="flex flex-col items-center flex-1 py-1 text-gray-400 hover:text-[#0a2558] transition"
+                    to={langLink('/sensor/produk')}
+                    className={`flex flex-col items-center flex-1 py-1 transition ${isCatalogPage && !location.pathname.includes('/cart') && !location.pathname.includes('/admin-login') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
                   >
                     <Home className="w-5 h-5 mb-1" />
                     <span className="text-[10px] font-bold">Beranda</span>
                   </Link>
 
                   <Link 
-                    to={langLink(site === 'sensor' ? '/sensor/produk' : '/panca/produk')}
-                    className={`flex flex-col items-center flex-1 py-1 transition ${isCatalogPage ? 'text-[#0a2558]' : 'text-gray-400 hover:text-[#0a2558]'}`}
+                    to={langLink('/cart')}
+                    className={`flex flex-col items-center flex-1 py-1 relative transition ${location.pathname.includes('/cart') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
                   >
-                    <Building className="w-5 h-5 mb-1" />
-                    <span className="text-[10px] font-bold">Mall</span>
+                    <ShoppingCart className="w-5 h-5 mb-1" />
+                    <span className="text-[10px] font-bold">Keranjang</span>
+                    {getTotalItemsBySite('sensor') > 0 && (
+                      <span className="absolute top-0.5 right-1/2 translate-x-5 inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold leading-none text-white bg-red-600 rounded-full scale-90">
+                        {getTotalItemsBySite('sensor')}
+                      </span>
+                    )}
                   </Link>
 
                   <a 
                     href="https://wa.me/6285313200188"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex flex-col items-center flex-1 py-1 relative text-gray-400 hover:text-[#0a2558] transition"
+                    className="flex flex-col items-center flex-1 py-1 relative text-gray-400 hover:text-blue-600 transition"
                   >
-                    <MessageSquare className="w-5 h-5 mb-1" />
-                    <span className="text-[10px] font-bold">Kotak Masuk</span>
-                    <span className="absolute top-1.5 right-6 w-2 h-2 bg-amber-500 rounded-full"></span>
+                    <div className="relative">
+                      <MessageSquare className="w-5 h-5 mb-1" />
+                      <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full animate-ping"></span>
+                      <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full"></span>
+                    </div>
+                    <span className="text-[10px] font-bold">Pesan</span>
                   </a>
 
                   <Link 
                     to="/admin-login"
-                    className="flex flex-col items-center flex-1 py-1 text-gray-400 hover:text-[#0a2558] transition"
+                    className={`flex flex-col items-center flex-1 py-1 transition ${location.pathname.includes('/admin-login') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
                   >
                     <User className="w-5 h-5 mb-1" />
                     <span className="text-[10px] font-bold">Saya</span>
@@ -159,42 +167,40 @@ export function PublicLayout() {
           )}
         </main>
 
-        {!isShopPage && (
-          <footer className="bg-gray-900 text-gray-300 py-12 border-t border-gray-800">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div>
-                <div className="flex items-center gap-2 mb-4 bg-white p-2 rounded w-fit">
-                  <img src="https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png" alt="PT Panca Prima Wijaya Logo" className="h-8 w-auto" />
-                </div>
-                <p className="text-sm leading-relaxed">
-                  {isEn 
-                    ? 'PT. Panca Prima Wijaya is a premier integration solution provider for Building Management Systems (BMS), Early Warning Systems (EWS), Real Time Monitoring Systems (RTMS), and Toyo Earthquake Sensors for high-tech facilities, commercial structures, properties, and data centers.'
-                    : 'PT. Panca Prima Wijaya adalah perusahaan penyedia solusi Building Management System (BMS), Early Warning System (EWS), Real Time Monitoring System (RTMS), dan Sensor Gempa Toyo untuk gedung, pabrik, rumah sakit, hotel, data center, dan fasilitas industri modern.'}
-                </p>
+        <footer className={cn("bg-gray-900 text-gray-300 pt-12 border-t border-gray-800", isShopPage ? "pb-28 md:pb-12" : "pb-12")}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4 bg-white p-2 rounded w-fit">
+                <img src="https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png" alt="PT Panca Prima Wijaya Logo" className="h-8 w-auto" />
               </div>
-              <div>
-                <h3 className="text-white font-semibold mb-4 text-lg">{isEn ? 'Core Solutions' : 'Solusi Utama'}</h3>
-                <ul className="space-y-2 text-sm flex flex-col">
-                  <li><Link to={langLink('/sensor/early-warning-system')} className="hover:text-blue-400 transition-colors">Early Warning System</Link></li>
-                  <li><Link to={langLink('/sensor/sensor-gempa')} className="hover:text-blue-400 transition-colors">Sensor Gempa Toyo / Earthquake Sensors</Link></li>
-                  <li><Link to={langLink('/sensor/building-management-system')} className="hover:text-blue-400 transition-colors">Building Management System</Link></li>
-                  <li><Link to={langLink('/sensor/real-time-monitoring-system-rtms')} className="hover:text-blue-400 transition-colors">Real Time Monitoring System (RTMS)</Link></li>
-                  <li><Link to={langLink('/sensor/sparepart-lift-terlengkap')} className="hover:text-blue-400 transition-colors">{isEn ? 'Elevator & Escalator Spare Parts' : 'Spare Part Lift & Eskalator'}</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-white font-semibold mb-4 text-lg">{t('hubungiKami')}</h3>
-                <ul className="space-y-2 text-sm flex flex-col gap-2">
-                  <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-blue-500" /> 0853-1320-0188</li>
-                  <li className="leading-relaxed">Jalan Kayu Putih VII Blok A4 No. 8, RT.3/RW.6, Pulo Gadung, Kec. Pulo Gadung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 14240</li>
-                </ul>
-              </div>
+              <p className="text-sm leading-relaxed">
+                {isEn 
+                  ? 'PT. Panca Prima Wijaya is a premier integration solution provider for Building Management Systems (BMS), Early Warning Systems (EWS), Real Time Monitoring Systems (RTMS), and Toyo Earthquake Sensors for high-tech facilities, commercial structures, properties, and data centers.'
+                  : 'PT. Panca Prima Wijaya adalah perusahaan penyedia solusi Building Management System (BMS), Early Warning System (EWS), Real Time Monitoring System (RTMS), dan Sensor Gempa Toyo untuk gedung, pabrik, rumah sakit, hotel, data center, dan fasilitas industri modern.'}
+              </p>
             </div>
-            <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-500">
-              {t('copyrightSensor')}
+            <div>
+              <h3 className="text-white font-semibold mb-4 text-lg">{isEn ? 'Core Solutions' : 'Solusi Utama'}</h3>
+              <ul className="space-y-2 text-sm flex flex-col">
+                <li><Link to={langLink('/sensor/early-warning-system')} className="hover:text-blue-400 transition-colors">Early Warning System</Link></li>
+                <li><Link to={langLink('/sensor/sensor-gempa')} className="hover:text-blue-400 transition-colors">Sensor Gempa Toyo / Earthquake Sensors</Link></li>
+                <li><Link to={langLink('/sensor/building-management-system')} className="hover:text-blue-400 transition-colors">Building Management System</Link></li>
+                <li><Link to={langLink('/sensor/real-time-monitoring-system-rtms')} className="hover:text-blue-400 transition-colors">Real Time Monitoring System (RTMS)</Link></li>
+                <li><Link to={langLink('/sensor/sparepart-lift-terlengkap')} className="hover:text-blue-400 transition-colors">{isEn ? 'Elevator & Escalator Spare Parts' : 'Spare Part Lift & Eskalator'}</Link></li>
+              </ul>
             </div>
-          </footer>
-        )}
+            <div>
+              <h3 className="text-white font-semibold mb-4 text-lg">{t('hubungiKami')}</h3>
+              <ul className="space-y-2 text-sm flex flex-col gap-2">
+                <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-blue-500" /> 0853-1320-0188</li>
+                <li className="leading-relaxed">Jalan Kayu Putih VII Blok A4 No. 8, RT.3/RW.6, Pulo Gadung, Kec. Pulo Gadung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 14240</li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-500">
+            {t('copyrightSensor')}
+          </div>
+        </footer>
       </div>
     );
   }
@@ -267,46 +273,100 @@ export function PublicLayout() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1">
-        <Outlet />
+      <main className="flex-1 flex flex-col justify-start">
+        {isShopPage ? (
+          <div className="bg-[#f8fafc] w-full flex-1 flex flex-col justify-start pb-16">
+            <div className="max-w-7xl w-full mx-auto bg-white min-h-[calc(100vh-80px)] shadow-lg border-x border-gray-100 flex flex-col justify-between relative animate-fade-in">
+              <div className="flex-1">
+                <Outlet />
+              </div>
+              
+              {/* Fixed Bottom App Navigation Bar */}
+              <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 py-2.5 flex justify-around items-center w-full max-w-7xl mx-auto shadow-[0_-4px_12px_rgba(0,0,0,0.08)] border-x">
+                <Link 
+                  to={langLink('/panca/produk')}
+                  className={`flex flex-col items-center flex-1 py-1 transition ${isCatalogPage && !location.pathname.includes('/cart') && !location.pathname.includes('/admin-login') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
+                >
+                  <Home className="w-5 h-5 mb-1" />
+                  <span className="text-[10px] font-bold">Beranda</span>
+                </Link>
+
+                <Link 
+                  to={langLink('/cart')}
+                  className={`flex flex-col items-center flex-1 py-1 relative transition ${location.pathname.includes('/cart') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
+                >
+                  <ShoppingCart className="w-5 h-5 mb-1" />
+                  <span className="text-[10px] font-bold">Keranjang</span>
+                  {getTotalItemsBySite('panca') > 0 && (
+                    <span className="absolute top-0.5 right-1/2 translate-x-5 inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold leading-none text-white bg-red-600 rounded-full scale-90">
+                      {getTotalItemsBySite('panca')}
+                    </span>
+                  )}
+                </Link>
+
+                <a 
+                  href="https://wa.me/6285313200188"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center flex-1 py-1 relative text-gray-400 hover:text-blue-600 transition"
+                >
+                  <div className="relative">
+                    <MessageSquare className="w-5 h-5 mb-1" />
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full animate-ping"></span>
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full"></span>
+                  </div>
+                  <span className="text-[10px] font-bold">Pesan</span>
+                </a>
+
+                <Link 
+                  to="/admin-login"
+                  className={`flex flex-col items-center flex-1 py-1 transition ${location.pathname.includes('/admin-login') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
+                >
+                  <User className="w-5 h-5 mb-1" />
+                  <span className="text-[10px] font-bold">Saya</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <Outlet />
+        )}
       </main>
 
       {/* Footer */}
-        {!isShopPage && (
-          <footer className="bg-gray-900 text-gray-300 py-12 border-t border-gray-800">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div>
-                <div className="flex items-center gap-2 mb-4 bg-white p-2 rounded w-fit">
-                  <img src="https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png" alt="PT Panca Prima Wijaya Logo" className="h-8 w-auto" />
-                </div>
-                <p className="text-sm leading-relaxed">
-                  {isEn 
-                    ? 'One-stop solution for crop protection consultation, grain pest control, professional agricultural fumigation and high-fidelity warning/monitoring technologies.'
-                    : 'One-stop solution untuk konsultasi, pengendalian hama, penanganan pasca panen komoditas pertanian, serta teknologi sistem keamanan dan monitoring modern.'}
-                </p>
-              </div>
-              <div>
-                <h3 className="text-white font-semibold mb-4 text-lg">{isEn ? 'Our Main Services' : 'Layanan Utama'}</h3>
-                <ul className="space-y-2 text-sm">
-                  <li>{isEn ? 'Agricultural Grain & Rice Fumigation' : 'Fumigasi Beras & Biji-bijian'}</li>
-                  <li>{isEn ? 'Professional Port Warehouse Sanitation' : 'Sanitasi Gudang Pangan'}</li>
-                  <li>{isEn ? 'Early Warning System (EWS)' : 'Early Warning System (EWS)'}</li>
-                  <li>{isEn ? 'Structural Health Monitoring (SHMS)' : 'Structural Health Monitoring (SHMS)'}</li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-white font-semibold mb-4 text-lg">{t('hubungiKami')}</h3>
-                <ul className="space-y-2 text-sm flex flex-col gap-2">
-                  <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-blue-500" /> 0853-1320-0188</li>
-                  <li className="leading-relaxed">Jalan Kayu Putih VII Blok A4 No. 8, RT.3/RW.6, Pulo Gadung, Kec. Pulo Gadung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 14240</li>
-                </ul>
-              </div>
+      <footer className={cn("bg-gray-900 text-gray-300 pt-12 border-t border-gray-800", isShopPage ? "pb-28 md:pb-12" : "pb-12")}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div>
+            <div className="flex items-center gap-2 mb-4 bg-white p-2 rounded w-fit">
+              <img src="https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png" alt="PT Panca Prima Wijaya Logo" className="h-8 w-auto" />
             </div>
-            <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-500">
-              {t('copyright')}
-            </div>
-          </footer>
-        )}
+            <p className="text-sm leading-relaxed">
+              {isEn 
+                ? 'One-stop solution for crop protection consultation, grain pest control, professional agricultural fumigation and high-fidelity warning/monitoring technologies.'
+                : 'One-stop solution untuk konsultasi, pengendalian hama, penanganan pasca panen komoditas pertanian, serta teknologi sistem keamanan dan monitoring modern.'}
+            </p>
+          </div>
+          <div>
+            <h3 className="text-white font-semibold mb-4 text-lg">{isEn ? 'Our Main Services' : 'Layanan Utama'}</h3>
+            <ul className="space-y-2 text-sm">
+              <li>{isEn ? 'Agricultural Grain & Rice Fumigation' : 'Fumigasi Beras & Biji-bijian'}</li>
+              <li>{isEn ? 'Professional Port Warehouse Sanitation' : 'Sanitasi Gudang Pangan'}</li>
+              <li>{isEn ? 'Early Warning System (EWS)' : 'Early Warning System (EWS)'}</li>
+              <li>{isEn ? 'Structural Health Monitoring (SHMS)' : 'Structural Health Monitoring (SHMS)'}</li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-white font-semibold mb-4 text-lg">{t('hubungiKami')}</h3>
+            <ul className="space-y-2 text-sm flex flex-col gap-2">
+              <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-blue-500" /> 0853-1320-0188</li>
+              <li className="leading-relaxed">Jalan Kayu Putih VII Blok A4 No. 8, RT.3/RW.6, Pulo Gadung, Kec. Pulo Gadung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 14240</li>
+            </ul>
+          </div>
+        </div>
+        <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-500">
+          {t('copyright')}
+        </div>
+      </footer>
     </div>
   );
 }

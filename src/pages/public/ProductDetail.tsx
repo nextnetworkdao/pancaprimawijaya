@@ -4,7 +4,6 @@ import { ArrowLeft, ShoppingCart, ShieldCheck, ChevronRight } from 'lucide-react
 import { SEO } from '../../components/SEO';
 import { Product } from '../../types';
 import { useCart } from '../../store';
-import { ProductSlider } from '../../components/ProductSlider';
 import { KlienKami } from '../../components/KlienKami';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAutoTranslate } from '../../hooks/useAutoTranslate';
@@ -105,7 +104,6 @@ export default function ProductDetail() {
 
   return (
     <>
-      <ProductSlider />
       <div className="bg-gray-50 min-h-screen pt-4 pb-16 animate-fade-in">
         <SEO 
           title={translatedProduct.seoTitle || translatedProduct.name}

@@ -37,6 +37,7 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminMedia from './pages/admin/AdminMedia';
 import AdminPages from './pages/admin/AdminPages';
 import AdminPageEdit from './pages/admin/AdminPageEdit';
+import AdminStoreManagement from './pages/admin/AdminStoreManagement';
 import PageDetail from './pages/public/PageDetail';
 import BmsSensorPage from './pages/public/BmsSensorPage';
 import EwsSensorPage from './pages/public/EwsSensorPage';
@@ -142,6 +143,8 @@ export default function App() {
                   <Route path="products" element={<AdminProducts />} />
                   <Route path="products/new" element={<AdminProductForm />} />
                   <Route path="products/:id/edit" element={<AdminProductForm />} />
+
+                  <Route path="store-management" element={<AdminStoreManagement />} />
 
                   <Route path="orders" element={<AdminOrders />} />
                   <Route path="scripts" element={<AdminScripts />} />

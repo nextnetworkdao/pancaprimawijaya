@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, ShoppingBag, Settings, LogOut, Activity, LayoutTemplate, Box, Home, ChevronRight, ChevronDown, Image as ImageIcon, Code, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FileText, ShoppingBag, Settings, LogOut, Activity, LayoutTemplate, Box, Home, ChevronRight, ChevronDown, Image as ImageIcon, Code, Menu, X, Store } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { SEO } from '../components/SEO';
 
@@ -18,6 +18,7 @@ export function AdminLayout() {
     { name: 'Pos', href: '/admin/posts', icon: FileText },
     { name: 'Media', href: '/admin/media', icon: ImageIcon },
     { name: 'Produk', href: '/admin/products', icon: Box },
+    { name: 'Kelola Toko', href: '/admin/store-management', icon: Store },
     { name: 'Pesanan', href: '/admin/orders', icon: ShoppingBag },
     { name: 'Insert Script', href: '/admin/scripts', icon: Code },
   ];

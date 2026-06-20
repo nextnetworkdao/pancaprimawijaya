@@ -1,36 +1,211 @@
 import React, { useEffect, useState } from 'react';
-import { Search, ShoppingCart, Bell, Cpu, Shirt, ShoppingBag, Sparkles, ChevronRight, Flame, Star, Home, MessageSquare, User, Building } from 'lucide-react';
+import { 
+  Search, ShoppingCart, Bell, Cpu, Shirt, ShoppingBag, Sparkles, 
+  ChevronRight, Flame, Star, Home, MessageSquare, User, Building, 
+  Gamepad2, Activity, Utensils, BookOpen, Heart, ArrowRight, CheckCircle2, Plus 
+} from 'lucide-react';
 import { SEO } from '../../components/SEO';
 import { formatCurrency } from '../../lib/utils';
 import { Product } from '../../types';
 import { useCart } from '../../store';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { KlienKami } from '../../components/KlienKami';
 
+interface BannerConfig {
+  badge?: string;
+  title: string;
+  subtitle: string;
+  buttonText?: string;
+  image: string;
+  bgColor: string;
+}
+
+interface FlashSaleItem {
+  id: string;
+  name: string;
+  price: number;
+  originalPrice: number;
+  discount: string;
+  progressText: string;
+  progressValue: number;
+  image: string;
+}
+
+interface RecommendItem {
+  id: string;
+  name: string;
+  price: number;
+  rating: string;
+  soldText: string;
+  location: string;
+  image: string;
+}
+
+interface CategoryConfig {
+  id: string;
+  label: string;
+  iconName: string;
+}
+
+interface StoreConfig {
+  mainBanner: BannerConfig;
+  subBanner1: BannerConfig;
+  subBanner2: BannerConfig;
+  flashSaleHours: number;
+  flashSaleMinutes: number;
+  flashSaleSeconds: number;
+  flashSaleItems: FlashSaleItem[];
+  recommendItems: RecommendItem[];
+  categories: CategoryConfig[];
+}
+
+const DEFAULT_CONFIG: StoreConfig = {
+  mainBanner: {
+    badge: "Promo Eksklusif",
+    title: "Upgrade Gaya Hidup Digital Anda",
+    subtitle: "Diskon hingga 50% untuk perangkat audio premium dan gadget rumah pintar.",
+    buttonText: "Belanja Sekarang",
+    image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&auto=format&fit=crop&q=60",
+    bgColor: "#0f172a"
+  },
+  subBanner1: {
+    title: "Fashion Pria",
+    subtitle: "Koleksi Terbaru 2024",
+    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=60",
+    bgColor: "#1a2e40"
+  },
+  subBanner2: {
+    title: "Kecantikan",
+    subtitle: "Tampil Glowing Setiap Hari",
+    image: "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=800&auto=format&fit=crop&q=60",
+    bgColor: "#ccfbf1"
+  },
+  flashSaleHours: 2,
+  flashSaleMinutes: 45,
+  flashSaleSeconds: 12,
+  flashSaleItems: [
+    {
+      id: "fs-1",
+      name: "Sony WH-1000XM5 Wireless Headphones",
+      price: 4299000,
+      originalPrice: 5999000,
+      discount: "Diskon 40%",
+      progressText: "75% Terjual",
+      progressValue: 75,
+      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      id: "fs-2",
+      name: "Mechanical Gaming Keyboard RGB TKL",
+      price: 850000,
+      originalPrice: 1150000,
+      discount: "Diskon 25%",
+      progressText: "20% Terjual",
+      progressValue: 20,
+      image: "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      id: "fs-3",
+      name: "Smart Coffee Brewer Set V2",
+      price: 1200000,
+      originalPrice: 2400000,
+      discount: "Diskon 50%",
+      progressText: "Hampir Habis!",
+      progressValue: 95,
+      image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=500&auto=format&fit=crop&q=60"
+    }
+  ],
+  recommendItems: [
+    {
+      id: "rec-1",
+      name: "Panca Air Purifier Pro - Filter HEPA 13",
+      price: 1850000,
+      rating: "4.9",
+      soldText: "Terjual 2rb+",
+      location: "Jakarta Pusat",
+      image: "https://images.unsplash.com/photo-1585338107529-13afc5f02586?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      id: "rec-2",
+      name: "Logitech G Pro Wireless Gaming Mouse",
+      price: 1499000,
+      rating: "5.0",
+      soldText: "Terjual 5rb+",
+      location: "Surabaya",
+      image: "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      id: "rec-3",
+      name: "Handmade Ceramic Dining Set - Indigo Blue",
+      price: 650000,
+      rating: "4.8",
+      soldText: "Terjual 800+",
+      location: "Bandung",
+      image: "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      id: "rec-4",
+      name: "Ergonomic Office Chair - Blue Mesh",
+      price: 2350000,
+      rating: "4.9",
+      soldText: "Terjual 1.2rb+",
+      location: "Tangerang",
+      image: "https://images.unsplash.com/photo-1505797149-43b0069ec26b?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      id: "rec-5",
+      name: "Mirrorless Camera 4K - Content Creator Kit",
+      price: 12500000,
+      rating: "5.0",
+      soldText: "Terjual 500+",
+      location: "Jakarta Selatan",
+      image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&auto=format&fit=crop&q=60"
+    }
+  ],
+  categories: [
+    { id: "cat-1", label: "Elektronik", iconName: "Cpu" },
+    { id: "cat-2", label: "Fashion", iconName: "Shirt" },
+    { id: "cat-3", label: "Rumah", iconName: "Home" },
+    { id: "cat-4", label: "Gaming", iconName: "Gamepad2" },
+    { id: "cat-5", label: "Olahraga", iconName: "Activity" },
+    { id: "cat-6", label: "Kecantikan", iconName: "Sparkles" },
+    { id: "cat-7", label: "Kuliner", iconName: "Utensils" },
+    { id: "cat-8", label: "Buku", iconName: "BookOpen" }
+  ]
+};
+
 export default function Catalog() {
+  const [storeConfig, setStoreConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
   const [products, setProducts] = useState<Product[]>([]);
   const { addItem, getTotalItemsBySite } = useCart();
   const [loading, setLoading] = useState(true);
   const location = useLocation();
-  const navigate = useNavigate();
 
-  // Search, categories, and load more pagination states
+  // Search & dynamic values
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [visCount, setVisCount] = useState(4); // Desktop/mobile initial products count
-
-  // Active slideshow index
-  const [activeSlide, setActiveSlide] = useState(0);
-
-  // Active bottom navigation tab selection
-  const [activeTab, setActiveTab] = useState<'beranda' | 'mall' | 'kotak' | 'saya'>('beranda');
-
-  // Interactive Live Countdown Timer state
+  const [visCount, setVisCount] = useState(10);
   const [timeLeft, setTimeLeft] = useState({ hours: 2, minutes: 45, seconds: 12 });
+  const [addedItemName, setAddedItemName] = useState<string | null>(null);
 
-  const isSensorPath = location.pathname.includes('/sensor/produk');
-  const isPancaPath = location.pathname.includes('/panca/produk');
+  const isSensorPath = location.pathname.includes('/sensor');
+  const isPancaPath = location.pathname.includes('/panca') || location.pathname === '/';
 
+  // Load custom storefront config
+  useEffect(() => {
+    fetch('/api/settings/store_layout')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.mainBanner) {
+          setStoreConfig({ ...DEFAULT_CONFIG, ...data });
+        }
+      })
+      .catch(err => {
+        console.warn("Could not load database store config, using defaults:", err);
+      });
+  }, []);
+
+  // Fetch actual products list
   useEffect(() => {
     fetch('/api/products')
       .then(res => res.json())
@@ -46,42 +221,28 @@ export default function Catalog() {
 
         setProducts(filtered);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, [isSensorPath, isPancaPath]);
 
-  // Handle ticking active Countdown Timer
+  // Countdown timer clock
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        } else {
-          return { hours: 2, minutes: 45, seconds: 12 }; // reset loop periodically
-        }
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        return { hours: storeConfig.flashSaleHours || 2, minutes: storeConfig.flashSaleMinutes || 45, seconds: 0 };
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
-
-  // Handle automated rotating hero slides
-  useEffect(() => {
-    const slideInterval = setInterval(() => {
-      setActiveSlide(p => (p + 1) % 3);
-    }, 5500);
-    return () => clearInterval(slideInterval);
-  }, []);
+  }, [storeConfig]);
 
   const pageTitle = isSensorPath 
-    ? "Katalog Produk Sensor | PT Panca Prima Wijaya"
-    : isPancaPath
-    ? "Katalog Produk Panca Prima Wijaya"
-    : "Katalog Produk & Layanan | PT Panca Prima Wijaya";
+    ? "Katalog E-commerce Alat & Sensor Gempa | PT Panca Prima Wijaya"
+    : "Katalog E-commerce Utama | PT Panca Prima Wijaya";
 
-  // Filter products by searching input and categories selection
+  // Filter existing database products
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           (p.description || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -93,346 +254,554 @@ export default function Catalog() {
     return matchesSearch;
   });
 
-  // Custom categories matching mock layout
-  const categoriesList = [
-    { id: 'elektronik', label: 'Elektronik', icon: Cpu, bg: 'bg-[#e0f2fe] text-blue-600', filterKey: 'sensor' },
-    { id: 'fashion', label: 'Fashion', icon: Shirt, bg: 'bg-[#ffedd5] text-amber-600', filterKey: 'sparepart' },
-    { id: 'kebutuhan', label: 'Kebutuhan Pokok', icon: ShoppingBag, bg: 'bg-[#dcfce7] text-emerald-600', filterKey: 'fumigasi' },
-    { id: 'kecantikan', label: 'Kecantikan', icon: Sparkles, bg: 'bg-[#fce7f3] text-rose-600', filterKey: 'pestisida' },
-    { id: 'all', label: 'Semua', icon: Building, bg: 'bg-[#ecfeff] text-cyan-600', filterKey: null }
-  ];
-
-  const handleCategoryClick = (filterKey: string | null) => {
-    setSelectedCategory(filterKey);
-    setVisCount(4); // Reset pagination count on category change
-  };
-
-  // Helper function to return simulated selling progress bar
-  const getSimulatedProgress = (prodId: string) => {
-    const charSum = prodId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-    const percentage = (charSum % 40) + 40; // 40% to 80%
-    return percentage;
-  };
-
-  // Helper function to render formatted rating score
-  const getSimulatedRating = (prodId: string) => {
-    const charSum = prodId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-    const score = ((charSum % 5) / 10) + 4.5; // 4.5 to 4.9
-    return score.toFixed(1);
-  };
-
-  const handleTabClick = (tab: 'beranda' | 'mall' | 'kotak' | 'saya') => {
-    setActiveTab(tab);
-    if (tab === 'saya') {
-      navigate('/admin-login');
-    } else if (tab === 'kotak') {
-      window.open('https://wa.me/6285313200188', '_blank');
-    } else if (tab === 'mall') {
-      setSelectedCategory(null);
-      setSearchQuery('');
+  const getIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case 'Cpu': return Cpu;
+      case 'Shirt': return Shirt;
+      case 'Home': return Home;
+      case 'Gamepad2': return Gamepad2;
+      case 'Activity': return Activity;
+      case 'Sparkles': return Sparkles;
+      case 'Utensils': return Utensils;
+      case 'BookOpen': return BookOpen;
+      default: return ShoppingBag;
     }
   };
 
+  const getBgForKategori = (idx: number) => {
+    const bgs = [
+      'bg-blue-50 text-blue-600 border-blue-100',
+      'bg-amber-50 text-amber-600 border-amber-100',
+      'bg-emerald-50 text-emerald-600 border-emerald-100',
+      'bg-purple-50 text-purple-600 border-purple-100',
+      'bg-pink-50 text-pink-600 border-pink-100',
+      'bg-teal-50 text-teal-600 border-teal-100',
+      'bg-orange-50 text-orange-600 border-orange-100',
+      'bg-cyan-50 text-cyan-600 border-cyan-100'
+    ];
+    return bgs[idx % bgs.length];
+  };
+
+  const handleAddToCart = (item: any) => {
+    addItem({
+      id: item.id || Date.now().toString(),
+      name: item.name,
+      price: item.price,
+      image: item.image,
+      quantity: 1,
+      site: isSensorPath ? 'sensor' : 'panca'
+    });
+    setAddedItemName(item.name);
+    setTimeout(() => setAddedItemName(null), 2500);
+  };
+
   return (
-    <div className="bg-white">
+    <div className="bg-[#f8fafc] min-h-screen text-slate-800 pb-16 font-sans">
       <SEO 
         title={pageTitle}
-        description="Pesan layanan sanitasi, obat kutu beras, atau sensor gempa (Early Warning System) terbaik dengan marketplace Panca Prima Wijaya."
+        description="Pesan sensor seismik, obat fumigasi, atau perlengkapan gedung komersial terbaik di Panca Shop."
         type="website"
         canonical={typeof window !== 'undefined' ? window.location.href : ''}
       />
 
-      <div>
-          {/* 2. DYNAMIC SEARCH INPUT BOX */}
-          <div className="p-4" id="search-container">
-            <div className="relative flex items-center w-full">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3" />
-              <input 
-                id="search-input-box"
-                type="text" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari produk..." 
-                className="w-full bg-slate-50 border border-gray-200 rounded-full py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-[#0a2558] focus:bg-white transition-all text-gray-800 font-medium"
-              />
-            </div>
+      {/* Floating Success Alert Toast for Add To Cart */}
+      {addedItemName && (
+        <div className="fixed bottom-20 right-4 md:bottom-8 md:right-8 z-50 bg-slate-900 text-white rounded-lg px-4 py-3 shadow-2xl border border-slate-700 flex items-center gap-2 max-w-sm animate-bounce">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <div className="text-xs">
+            <span className="font-bold block text-white truncate">{addedItemName}</span>
+            <span className="text-slate-400">Berhasil masuk ke keranjang belanja!</span>
+          </div>
+        </div>
+      )}
+
+      {/* BRAND HEADER BAR */}
+      <div className="bg-white border-b border-gray-100 sticky top-20 z-40 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-8 shrink-0">
+            <Link to={isSensorPath ? '/sensor' : '/panca'} className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-blue-700 to-indigo-800 bg-clip-text text-transparent flex items-center gap-1.5 hover:opacity-85 transition-opacity">
+              <span>🏰</span> PANCA SHOP
+            </Link>
           </div>
 
-          {/* 3. HERO SLIDESHOW BANNER PANEL */}
-          <div className="px-4 pb-4">
-            <div className="relative h-44 rounded-2xl overflow-hidden bg-gradient-to-tr from-[#0a2558] to-[#1e40af] text-white p-6 shadow-sm flex flex-col justify-between">
-              {/* Dynamic abstract graphic patterns inside slide */}
-              <div className="absolute right-0 bottom-0 opacity-15 overflow-hidden">
-                <svg width="240" height="240" viewBox="0 0 100 100" fill="none" className="translate-x-12 translate-y-12">
-                  <circle cx="50" cy="50" r="50" fill="white" />
-                </svg>
+          {/* Search bar inside the header */}
+          <div className="flex-1 max-w-lg relative block">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari barang impian Anda di Panca Shop..." 
+              className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-indigo-600 focus:bg-white rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none transition duration-150 text-slate-700 font-medium"
+            />
+          </div>
+
+          <div className="flex items-center gap-4 shrink-0">
+            <button className="p-2 text-slate-400 hover:text-slate-600 relative transition">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+            </button>
+            <Link to="/cart" className="p-2 text-slate-400 hover:text-slate-600 relative transition">
+              <ShoppingCart className="w-5 h-5" />
+              {getTotalItemsBySite(isSensorPath ? 'sensor' : 'panca') > 0 && (
+                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold leading-none text-white bg-rose-600 rounded-full scale-95">
+                  {getTotalItemsBySite(isSensorPath ? 'sensor' : 'panca')}
+                </span>
+              )}
+            </Link>
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-indigo-700 border border-indigo-100 shrink-0 select-none">
+              U
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN CONTAINER */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6">
+        
+        {/* 1. HERO BANNER GRID (2/3 & 1/3 stacked layout) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
+          
+          {/* Main big Left banner (2/3 width) */}
+          <div 
+            className="lg:col-span-2 rounded-2xl p-8 md:p-10 text-white relative overflow-hidden flex flex-col justify-between min-h-[340px] shadow-sm group"
+            style={{ 
+              backgroundColor: storeConfig.mainBanner.bgColor || '#0f172a',
+              backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 100%), url(${storeConfig.mainBanner.image})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          >
+            <div className="relative z-10 max-w-lg">
+              {storeConfig.mainBanner.badge && (
+                <span className="inline-block bg-indigo-600/95 text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full mb-4 shadow border border-indigo-400/30">
+                  {storeConfig.mainBanner.badge}
+                </span>
+              )}
+              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3 text-white leading-tight">
+                {storeConfig.mainBanner.title || "Upgrade Gaya Hidup Digital Anda"}
+              </h1>
+              <p className="text-sm text-slate-200 font-medium leading-relaxed mb-6 opacity-95">
+                {storeConfig.mainBanner.subtitle || "Dapatkan diskon eksklusif hingga 50% untuk berbagai model sensor gempa kustom dan perlindungan fumigasi modern."}
+              </p>
+            </div>
+            
+            <div className="relative z-10">
+              <button 
+                onClick={() => {
+                  const el = document.getElementById('products-grid-section');
+                  if(el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="bg-white text-slate-900 px-6 py-2.5 rounded-full text-xs font-bold hover:bg-indigo-650 hover:text-white transition-all shadow duration-200 flex items-center gap-1.5 w-fit"
+              >
+                <span>{storeConfig.mainBanner.buttonText || "Belanja Sekarang"}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            
+            {/* Soft decorative light leak glow */}
+            <div className="absolute right-0 bottom-0 w-80 h-80 bg-indigo-500/20 rounded-full filter blur-3xl -translate-x-12 translate-y-12"></div>
+          </div>
+
+          {/* Right stacked small banners (1/3 width) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+            
+            {/* Small Banner Top */}
+            <div 
+              className="rounded-2xl p-6 text-white relative overflow-hidden flex flex-col justify-end min-h-[160px] shadow-sm"
+              style={{
+                backgroundColor: storeConfig.subBanner1.bgColor || '#1e3a8a',
+                backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 100%), url(${storeConfig.subBanner1.image})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }}
+            >
+              <div className="relative z-10">
+                <span className="text-[9px] uppercase tracking-wider font-extrabold text-indigo-300 block mb-1">PROMO SPESIAL</span>
+                <h3 className="text-lg font-extrabold tracking-tight mb-1 text-white">{storeConfig.subBanner1.title}</h3>
+                <p className="text-xs text-slate-300 leading-snug">{storeConfig.subBanner1.subtitle}</p>
               </div>
+            </div>
 
-              {activeSlide === 0 && (
-                <div className="animate-fade-in relative z-10">
-                  <span className="bg-amber-500 text-white text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full tracking-wide">
-                    BIG PROMO SALE
-                  </span>
-                  <h3 className="text-2xl font-black mt-2 tracking-tight">50% SALE</h3>
-                  <p className="text-xs text-blue-100 mt-1 max-w-[200px] leading-relaxed">
-                    Dapatkan penawaran terbaik fumigasi dan monitoring sensor!
-                  </p>
-                </div>
-              )}
-
-              {activeSlide === 1 && (
-                <div className="animate-fade-in relative z-10">
-                  <span className="bg-emerald-500 text-white text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full tracking-wide">
-                    SOLUSI TERBAIK
-                  </span>
-                  <h3 className="text-xl font-black mt-2 tracking-tight">Fumiphos® 56 TB</h3>
-                  <p className="text-xs text-emerald-100 mt-1 max-w-[200px] leading-relaxed">
-                    Pembasmi kutu beras andalan nomor satu di Indonesia.
-                  </p>
-                </div>
-              )}
-
-              {activeSlide === 2 && (
-                <div className="animate-fade-in relative z-10">
-                  <span className="bg-[#06b6d4] text-white text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full tracking-wide">
-                    MITRA PROTEKSI
-                  </span>
-                  <h3 className="text-xl font-black mt-2 tracking-tight">Safety & Monitoring</h3>
-                  <p className="text-xs text-cyan-100 mt-1 max-w-[200px] leading-relaxed">
-                    Gas leak alarm & Earthquakes sensor andalan gedung modern.
-                  </p>
-                </div>
-              )}
-
-              {/* Slider Dots Indicator */}
-              <div className="flex gap-1.5 self-center">
-                {[0, 1, 2].map((idx) => (
-                  <button 
-                    key={idx}
-                    onClick={() => setActiveSlide(idx)}
-                    className={`h-2 rounded-full transition-all duration-300 ${activeSlide === idx ? 'w-5 bg-white' : 'w-2 bg-white/40'}`}
-                    aria-label={`Go to slide ${idx + 1}`}
-                  />
-                ))}
+            {/* Small Banner Bottom */}
+            <div 
+              className="rounded-2xl p-6 text-white relative overflow-hidden flex flex-col justify-end min-h-[160px] shadow-sm"
+              style={{
+                backgroundColor: storeConfig.subBanner2.bgColor || '#ccfbf1',
+                backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 100%), url(${storeConfig.subBanner2.image})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }}
+            >
+              <div className="relative z-10">
+                <span className="text-[9px] uppercase tracking-wider font-extrabold text-teal-300 block mb-1">TERLARIS BULAN INI</span>
+                <h3 className="text-lg font-extrabold tracking-tight mb-1 text-white">{storeConfig.subBanner2.title}</h3>
+                <p className="text-xs text-slate-300 leading-snug">{storeConfig.subBanner2.subtitle}</p>
               </div>
             </div>
-          </div>
 
-          {/* 4. HORIZONTAL CATEGORIES BAR */}
-          <div className="px-4 py-2">
-            <div className="flex items-center justify-between overflow-x-auto pb-4 pt-1 gap-4 scrollbar-hide">
-              {categoriesList.map((cat) => {
-                const IconComp = cat.icon;
-                const isSelected = selectedCategory === cat.filterKey || (cat.id === 'all' && selectedCategory === null);
-                return (
-                  <button 
-                    key={cat.id}
-                    onClick={() => handleCategoryClick(cat.filterKey)}
-                    className="flex flex-col items-center flex-shrink-0 transition-transform active:scale-95 group"
-                  >
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${cat.bg} transition-all shadow-sm group-hover:shadow ${isSelected ? 'ring-2 ring-indigo-600 ring-offset-2' : ''}`}>
-                      <IconComp className="w-5 h-5" />
-                    </div>
-                    <span className={`text-[10px] font-bold mt-2 text-center max-w-[70px] leading-tight ${isSelected ? 'text-[#0a2558]' : 'text-gray-500'}`}>
-                      {cat.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
+        </div>
 
-          {/* 5. FLASH SALE PANEL SECTION */}
-          <div className="p-4 bg-white border-t border-b border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1 bg-amber-500 text-white rounded">
-                  <Flame className="w-5 h-5 fill-current text-white animate-pulse" />
-                </div>
-                <h2 className="text-lg font-black text-[#0a2558] tracking-tight">
-                  Flash Sale
+        {/* 2. POPULAR CATEGORIES GRID */}
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm mb-8">
+          <h2 className="text-md font-extrabold text-slate-900 mb-4 tracking-tight flex items-center gap-1.5">
+            <span>✨</span> Kategori Populer
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+            {storeConfig.categories.map((cat, idx) => {
+              const IconComp = getIconComponent(cat.iconName);
+              const isSelected = selectedCategory?.toLowerCase() === cat.label.toLowerCase();
+              return (
+                <button 
+                  key={cat.id}
+                  onClick={() => {
+                    setSelectedCategory(isSelected ? null : cat.label);
+                  }}
+                  className={`flex flex-col items-center hover:scale-102 hover:shadow-md border border-slate-100 transition-all rounded-2xl py-4 px-2 group ${isSelected ? 'ring-2 ring-indigo-600 bg-indigo-50 border-transparent shadow-sm' : 'bg-slate-50'}`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2.5 transition-all outline-none ${getBgForKategori(idx)}`}>
+                    <IconComp className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-center text-slate-700 select-none tracking-tight">
+                    {cat.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 3. DYNAMIC FLASH SALE SECTION */}
+        <div className="bg-gradient-to-r from-red-500 via-rose-500 to-orange-500 rounded-3xl p-6 shadow-md mb-8 text-white relative overflow-hidden">
+          {/* Decorative background circle */}
+          <div className="absolute right-0 top-0 opacity-10 bg-white w-96 h-96 rounded-full translate-x-24 -translate-y-24"></div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-yellow-400 text-slate-950 rounded-xl animate-pulse">
+                <Flame className="w-5 h-5 fill-current text-slate-950" />
+              </div>
+              <div>
+                <h2 className="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                  <span>FLASH SALE</span>
                 </h2>
-                
-                {/* Active Dynamic Countdown Timer Boxes */}
-                <div className="flex items-center gap-1 ml-2 text-xs font-bold">
-                  <span className="bg-slate-900 text-white font-mono rounded px-1.5 py-0.5 text-[11px]">
-                    {timeLeft.hours.toString().padStart(2, '0')}
-                  </span>
-                  <span className="text-slate-900">:</span>
-                  <span className="bg-slate-900 text-white font-mono rounded px-1.5 py-0.5 text-[11px]">
-                    {timeLeft.minutes.toString().padStart(2, '0')}
-                  </span>
-                  <span className="text-slate-900">:</span>
-                  <span className="bg-slate-900 text-orange-500 font-mono rounded px-1.5 py-0.5 text-[11px]">
-                    {timeLeft.seconds.toString().padStart(2, '0')}
-                  </span>
-                </div>
+                <p className="text-[11px] text-slate-100 font-medium">Jangan lewatkan penawaran terbatas dengan harga miring ini!</p>
               </div>
-
-              <Link to="/katalog" className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center">
-                Lihat Semua <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
-              </Link>
+              
+              {/* Countdown timer cards */}
+              <div className="flex items-center gap-1.5 ml-2">
+                <span className="bg-slate-900 border border-slate-800 text-white font-mono rounded px-2.5 py-1 text-xs font-extrabold shadow tracking-wider min-w-[28px] text-center">
+                  {timeLeft.hours.toString().padStart(2, '0')}
+                </span>
+                <span className="text-yellow-400 font-extrabold animate-pulse">:</span>
+                <span className="bg-slate-900 border border-slate-800 text-white font-mono rounded px-2.5 py-1 text-xs font-extrabold shadow tracking-wider min-w-[28px] text-center">
+                  {timeLeft.minutes.toString().padStart(2, '0')}
+                </span>
+                <span className="text-yellow-400 font-extrabold animate-pulse">:</span>
+                <span className="bg-slate-900 border border-slate-800 text-amber-400 font-mono rounded px-2.5 py-1 text-xs font-extrabold shadow tracking-wider min-w-[28px] text-center">
+                  {timeLeft.seconds.toString().padStart(2, '0')}
+                </span>
+              </div>
             </div>
-
-            {/* Scrollable Horizontal Discounted Rows */}
-            {loading ? (
-              <div className="flex gap-4 overflow-x-auto pb-2">
-                {[1, 2].map((i) => (
-                  <div key={i} className="w-[150px] flex-shrink-0 animate-pulse bg-gray-100 h-44 rounded-xl" />
-                ))}
-              </div>
-            ) : (
-              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                {products.slice(0, 3).map((prod, idx) => {
-                  const originalPrice = prod.price * (idx === 0 ? 1.66 : 1.35); // simulated strike price
-                  const discPct = idx === 0 ? '-40%' : '-25%';
-                  const progressVal = getSimulatedProgress(prod.id);
-
-                  return (
-                    <Link 
-                      key={prod.id}
-                      to={location.pathname.includes('/sensor') ? `/sensor/produk/${prod.slug}` : `/panca/produk/${prod.slug}`}
-                      className="w-[145px] bg-white flex-shrink-0 rounded-xl border border-gray-100 overflow-hidden flex flex-col justify-between group p-2 relative shadow-sm hover:border-[#1e40af]"
-                    >
-                      {/* Discount Label */}
-                      <span className="absolute top-2 left-2 bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-lg z-10 shadow-sm">
-                        {discPct}
-                      </span>
-
-                      <div className="aspect-square bg-slate-50 rounded-lg overflow-hidden flex items-center justify-center p-2 mb-2">
-                        <img 
-                          src={prod.image || undefined} 
-                          alt={prod.keywords || prod.name} 
-                          className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                        />
-                      </div>
-
-                      <div className="flex-1 flex flex-col justify-end">
-                        <h4 className="text-xs font-bold text-gray-800 truncate mb-1">
-                          {prod.name}
-                        </h4>
-                        <div className="mb-1.5">
-                          <span className="text-sm font-extrabold text-amber-500 block">
-                            {formatCurrency(prod.price)}
-                          </span>
-                          <span className="text-[9px] text-gray-400 line-through">
-                            {formatCurrency(originalPrice)}
-                          </span>
-                        </div>
-
-                        {/* Custom status bar */}
-                        <div>
-                          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-orange-400 to-amber-500 rounded-full"
-                              style={{ width: `${progressVal}%` }}
-                            />
-                          </div>
-                          <span className="text-[8px] font-bold text-gray-500 mt-1 block">
-                            Terjual {progressVal}%
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+            
+            <button 
+              onClick={() => setSelectedCategory(null)}
+              className="text-xs font-extrabold bg-white/20 backdrop-blur-sm border border-white/20 px-4 py-1.5 rounded-full hover:bg-white/35 transition cursor-pointer select-none"
+            >
+              Lihat Kategori Lain
+            </button>
           </div>
 
-          {/* 6. "REKOMENDASI UNTUKMU" GRID SECTION */}
-          <div className="p-4 bg-slate-50/50">
-            <h3 className="text-base font-black text-[#0a2558] tracking-tight mb-4">
-              Rekomendasi Untukmu
-            </h3>
+          {/* Flash Sale product list */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 relative z-10">
+            {storeConfig.flashSaleItems.map((item) => (
+              <div 
+                key={item.id}
+                className="bg-white rounded-2xl p-4 border border-slate-100 text-slate-800 flex items-center gap-4 hover:shadow-xl transition-all duration-200 group relative"
+              >
+                {/* Discount Badge on corner */}
+                <span className="absolute top-2.5 right-2.5 bg-rose-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm z-10">
+                  {item.discount}
+                </span>
 
-            {loading ? (
-              <div className="grid grid-cols-2 gap-3">
-                {[1, 2, 3, 4].map(idx => (
-                  <div key={idx} className="animate-pulse bg-white border border-gray-100 h-52 rounded-xl" />
-                ))}
+                <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-2 shrink-0 overflow-hidden">
+                  <img src={item.image} alt="" className="w-full h-full object-contain group-hover:scale-105 duration-200" />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-xs font-extrabold text-slate-800 truncate mb-1" title={item.name}>
+                    {item.name}
+                  </h4>
+                  <div className="flex items-baseline gap-1.5 mb-2">
+                    <span className="text-sm font-black text-rose-600">
+                      {formatCurrency(item.price)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 line-through">
+                      {formatCurrency(item.originalPrice)}
+                    </span>
+                  </div>
+
+                  {/* Stock progress meter */}
+                  <div>
+                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full"
+                        style={{ width: `${item.progressValue}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex items-center justify-between text-[9px] font-bold text-slate-500 mt-1">
+                      <span>{item.progressText}</span>
+                      <span>{item.progressValue}%</span>
+                    </div>
+                  </div>
+
+                  {/* Quick Add Button */}
+                  <button
+                    onClick={() => handleAddToCart(item)}
+                    className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center hover:bg-rose-600 hover:scale-105 transition duration-150 shadow"
+                    title="Beli Cepat"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-12 p-4 bg-white rounded-2xl border">
-                <p className="text-sm text-gray-400 font-bold mb-2">Pencarian tidak ditemukan</p>
-                <button 
-                  onClick={() => { setSearchQuery(''); setSelectedCategory(null); }} 
-                  className="px-4 py-1.5 bg-[#0a2558] text-white text-xs font-bold rounded-full"
-                >
-                  Reset Filter
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {filteredProducts.slice(0, visCount).map((prod, idx) => {
-                  const ratingVal = getSimulatedRating(prod.id);
-                  const isPromo = idx % 2 === 0;
+            ))}
 
-                  return (
-                    <Link 
-                      key={prod.id}
-                      to={location.pathname.includes('/sensor') ? `/sensor/produk/${prod.slug}` : `/panca/produk/${prod.slug}`}
-                      className="bg-white rounded-2xl border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all overflow-hidden flex flex-col justify-between group p-3 relative"
-                    >
-                      {/* Active Promo Sticker Tag */}
-                      {isPromo && (
-                        <span className="absolute top-3 right-3 bg-red-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full z-10 shadow-sm animate-pulse">
-                          Promo
-                        </span>
-                      )}
-
-                      <div className="aspect-square bg-slate-50 rounded-xl overflow-hidden mb-3 p-2 flex items-center justify-center">
-                        <img 
-                          src={prod.image || undefined} 
-                          alt={prod.keywords || prod.name} 
-                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-
-                      <div className="flex-1 flex flex-col justify-between">
-                        <div>
-                          <h4 className="text-xs font-bold text-gray-800 line-clamp-2 md:line-clamp-3 mb-1 group-hover:text-blue-600 transition-colors">
-                            {prod.name}
-                          </h4>
-                        </div>
-
-                        <div className="mt-3">
-                          <span className="text-sm font-black text-[#0a2558] block mb-1">
-                            {formatCurrency(prod.price)}
-                          </span>
-
-                          <div className="flex items-center text-[10px] text-gray-500 font-extrabold gap-1 mt-1">
-                            <span className="text-yellow-400">★</span>
-                            <span className="text-gray-700">{ratingVal}</span>
-                            <span className="text-gray-300">|</span>
-                            <span>{idx % 2 === 0 ? '1.2k' : '340'} terjual</span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* 7. MUAT LEBIH BANYAK BUTTON */}
-            {!loading && filteredProducts.length > visCount && (
-              <div className="mt-6">
-                <button 
-                  onClick={() => setVisCount(p => p + 6)}
-                  className="w-full bg-blue-50 hover:bg-blue-100 text-[#0a2558] border border-blue-200 py-3 rounded-2xl text-xs font-extrabold transition-all text-center"
-                >
-                  Muat Lebih Banyak
-                </button>
-              </div>
+            {storeConfig.flashSaleItems.length === 0 && (
+              <div className="col-span-full py-8 text-center text-slate-200 italic font-medium text-xs">Belum ada promo flash sale terdaftar.</div>
             )}
           </div>
         </div>
 
-      <div className="mt-8 px-4 pb-8">
-        {isPancaPath && <KlienKami />}
+        {/* 4. MAIN STORE PRODUCTS & RECOMMENDATIONS GRID */}
+        <div id="products-grid-section" className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          
+          {/* LEFT COLUMN: Categories sidebar / filters */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm sticky top-40">
+              <h3 className="text-sm font-black text-slate-900 border-b pb-3 mb-4 flex items-center gap-1.5 tracking-tight">
+                <span>🔍</span> Filter Produk
+              </h3>
+              
+              {/* Category selector widget list */}
+              <div className="space-y-1">
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between ${selectedCategory === null ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <span>Semua Produk</span>
+                  <span className="text-[10px] opacity-75">({products.length})</span>
+                </button>
+
+                {storeConfig.categories.map((cat) => {
+                  const itemsCount = products.filter(p => (p.category || '').toLowerCase().includes(cat.label.toLowerCase())).length;
+                  const isSelected = selectedCategory?.toLowerCase() === cat.label.toLowerCase();
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(isSelected ? null : cat.label)}
+                      className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between ${isSelected ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <span>{cat.label}</span>
+                      <span className="text-[10px] opacity-75">({itemsCount})</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Reset filter button if any active */}
+              {(selectedCategory || searchQuery) && (
+                <button
+                  onClick={() => { setSelectedCategory(null); setSearchQuery(''); }}
+                  className="w-full mt-6 py-2 border border-slate-200 rounded-full text-center hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition text-xs font-bold font-sans cursor-pointer select-none"
+                >
+                  Hapus Semua Filter
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Grid list of items */}
+          <div className="lg:col-span-3 space-y-8">
+            
+            {/* Products grid area */}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-md font-extrabold text-slate-900 tracking-tight">
+                    {selectedCategory ? `Kategori: ${selectedCategory}` : "Semua Produk & Rekomendasi"}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Menampilkan {filteredProducts.slice(0, visCount).length} dari {filteredProducts.length} hasil</p>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+                  {[1, 2, 3, 4, 5, 6].map(v => (
+                    <div key={v} className="bg-white border rounded-2xl h-64 animate-pulse"></div>
+                  ))}
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="bg-white border border-slate-100 rounded-3xl p-12 text-center shadow-sm">
+                  <div className="text-2xl mb-2">🎁</div>
+                  <h4 className="font-extrabold text-slate-800 text-sm">Produk Tidak Ditemukan</h4>
+                  <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">Produk yang Anda cari saat ini kosong atau sedang tidak tersedia untuk kategori ini.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {/* Render loaded config custom items first or normal database products */}
+                  {filteredProducts.slice(0, visCount).map((prod, idx) => {
+                    const ratingScore = (((prod.name.length || 3) % 5) / 10 + 4.5).toFixed(1);
+                    const isPromo = idx % 3 === 0;
+                    return (
+                      <div 
+                        key={prod.id} 
+                        className="bg-white border border-slate-100 rounded-2xl hover:shadow-xl hover:border-indigo-150 transition-all duration-200 flex flex-col justify-between p-3 relative group"
+                      >
+                        {isPromo && (
+                          <span className="absolute top-2.5 left-2.5 bg-indigo-600 text-white text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full shadow-sm z-10 select-none">
+                            Populer
+                          </span>
+                        )}
+
+                        <Link 
+                          to={isSensorPath ? `/sensor/produk/${prod.slug}` : `/panca/produk/${prod.slug}`}
+                          className="block"
+                        >
+                          <div className="aspect-square bg-slate-50 rounded-xl overflow-hidden mb-3 p-3 flex items-center justify-center">
+                            <img 
+                              src={prod.image || undefined} 
+                              alt={prod.name} 
+                              className="w-full h-full object-contain group-hover:scale-103 transition-transform duration-200"
+                            />
+                          </div>
+                        </Link>
+
+                        <div className="flex-1 flex flex-col justify-between pt-1">
+                          <Link to={isSensorPath ? `/sensor/produk/${prod.slug}` : `/panca/produk/${prod.slug}`}>
+                            <h4 className="text-xs font-bold text-slate-800 line-clamp-2 hover:text-indigo-600 transition duration-150" title={prod.name}>
+                              {prod.name}
+                            </h4>
+                          </Link>
+
+                          <div className="mt-2 text-left">
+                            <span className="text-sm font-black text-slate-900 block leading-none">
+                              {formatCurrency(prod.price)}
+                            </span>
+
+                            {/* Vendor, rating, sales info to match Shopee/Tokopedia exact looks */}
+                            <div className="mt-2.5 border-t border-slate-50 pt-2 text-[10px] text-slate-500 flex flex-col gap-1 font-sans">
+                              <span className="text-[10px] font-bold text-slate-400 block max-w-full truncate">📍 Jakarta Pusat</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-yellow-400 font-bold">★</span>
+                                <span className="font-extrabold text-slate-700">{ratingScore}</span>
+                                <span className="text-slate-200">|</span>
+                                <span className="font-semibold text-slate-400">Terjual {((idx + 1) * 140) % 900}+</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Inline Add to Cart trigger buttons */}
+                          <div className="mt-3 flex gap-1.5">
+                            <button
+                              onClick={() => handleAddToCart(prod)}
+                              className="flex-1 px-2 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-extrabold transition text-center flex items-center justify-center gap-1 cursor-pointer select-none border border-indigo-100/30"
+                            >
+                              <ShoppingCart className="w-3.5 h-3.5" />
+                              <span>Beli</span>
+                            </button>
+                            <Link
+                              to={isSensorPath ? `/sensor/produk/${prod.slug}` : `/panca/produk/${prod.slug}`}
+                              className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-extrabold transition text-center shrink-0 flex items-center justify-center"
+                              title="Lihat Detail"
+                            >
+                              Detail
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* MUAT LEBIH BANYAK PAGINATION TRIGGER */}
+              {!loading && filteredProducts.length > visCount && (
+                <div className="mt-8">
+                  <button 
+                    onClick={() => setVisCount(prev => prev + 8)}
+                    className="w-full bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 py-3.5 rounded-full text-xs font-bold text-slate-700 hover:text-indigo-700 transition"
+                  >
+                    Lihat Produk Lainnya
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Custom static recommendation lists in config (e.g. recommend items) block */}
+            <div className="border-t border-slate-100 pt-8">
+              <h3 className="text-md font-extrabold text-slate-900 tracking-tight mb-5 flex items-center gap-1.5">
+                <span>🔥</span> Rekomendasi Khusus Untuk Anda
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+                {storeConfig.recommendItems.map((item) => (
+                  <div 
+                    key={item.id}
+                    className="bg-white border border-slate-100 rounded-2xl hover:shadow-xl hover:border-indigo-150 transition-all duration-200 flex flex-col justify-between p-3 relative group"
+                  >
+                    <div className="aspect-square bg-slate-50 rounded-xl overflow-hidden mb-3 p-3 flex items-center justify-center relative">
+                      <img src={item.image} alt="" className="w-full h-full object-contain group-hover:scale-103 transition" />
+                    </div>
+
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800 line-clamp-2" title={item.name}>
+                          {item.name}
+                        </h4>
+                      </div>
+
+                      <div className="mt-2 text-left">
+                        <span className="text-sm font-black text-slate-900 block leading-none">
+                          {formatCurrency(item.price)}
+                        </span>
+
+                        <div className="mt-2.5 border-t border-slate-50 pt-2 text-[10px] text-slate-500 flex flex-col gap-1">
+                          <span className="text-[10px] font-bold text-slate-400 block truncate">📍 {item.location}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-yellow-400 font-bold block">★</span>
+                            <span className="font-extrabold text-slate-700">{item.rating}</span>
+                            <span className="text-slate-200">|</span>
+                            <span className="font-semibold text-slate-400">{item.soldText}</span>
+                          </div>
+                        </div>
+
+                        {/* Quick action buttons */}
+                        <div className="mt-3">
+                          <button
+                            onClick={() => handleAddToCart(item)}
+                            className="w-full py-1.5 bg-slate-900 hover:bg-indigo-650 text-white rounded-lg text-[10px] font-extrabold transition flex items-center justify-center gap-1 border border-transparent"
+                          >
+                            <ShoppingCart className="w-3.5 h-3.5" />
+                            <span>Beli Sekarang</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* 5. BRAND PARTNER FOOTER SECTION */}
+        <div className="mt-14">
+          {isPancaPath && <KlienKami />}
+        </div>
+
       </div>
     </div>
   );
 }
-
