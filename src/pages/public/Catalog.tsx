@@ -10,6 +10,7 @@ import { Product } from '../../types';
 import { useCart } from '../../store';
 import { Link, useLocation } from 'react-router-dom';
 import { KlienKami } from '../../components/KlienKami';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface BannerConfig {
   badge?: string;
@@ -175,6 +176,7 @@ const DEFAULT_CONFIG: StoreConfig = {
 };
 
 export default function Catalog() {
+  const { isEn, langLink } = useLanguage();
   const [storeConfig, setStoreConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
   const [products, setProducts] = useState<Product[]>([]);
   const { addItem, getTotalItemsBySite } = useCart();
@@ -799,6 +801,56 @@ export default function Catalog() {
         {/* 5. BRAND PARTNER FOOTER SECTION */}
         <div className="mt-14">
           {isPancaPath && <KlienKami />}
+        </div>
+
+        {/* 6. POLICY LINKS SECTION FOR GOOGLE MERCHANT */}
+        <div className="mt-12 mb-6 border-t border-slate-200 pt-8 pb-4 text-center">
+          <div className="max-w-4xl mx-auto px-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
+              {isEn ? 'Information & Policies' : 'Informasi & Kebijakan'}
+            </h4>
+            <div className="flex flex-wrap justify-center gap-3 sm:gap-6 text-sm">
+              <Link 
+                to={langLink('/kebijakan-pengembalian-dana')} 
+                className="text-slate-600 hover:text-indigo-600 font-medium transition-colors border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-xl bg-white shadow-sm"
+              >
+                {isEn ? 'Return & Refund Policy' : 'Kebijakan Pengembalian & Dana'}
+              </Link>
+              <Link 
+                to={langLink('/kontak')} 
+                className="text-slate-600 hover:text-indigo-600 font-medium transition-colors border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-xl bg-white shadow-sm"
+              >
+                {isEn ? 'Contact Us' : 'Hubungi Kami (Kontak)'}
+              </Link>
+              <Link 
+                to={langLink('/syarat-ketentuan')} 
+                className="text-slate-600 hover:text-indigo-600 font-medium transition-colors border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-xl bg-white shadow-sm"
+              >
+                {isEn ? 'Terms & Conditions' : 'Syarat & Ketentuan'}
+              </Link>
+              <Link 
+                to={langLink('/kebijakan-privasi')} 
+                className="text-slate-600 hover:text-indigo-600 font-medium transition-colors border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-xl bg-white shadow-sm"
+              >
+                {isEn ? 'Privacy Policy' : 'Kebijakan Privasi'}
+              </Link>
+            </div>
+            
+            {/* Accepted Payments Info Badge */}
+            <div className="mt-6 p-4 bg-[#f8fafc] border border-slate-100 rounded-2xl max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-left animate-fade-in">
+                <span className="text-xs font-extrabold text-slate-800 block uppercase tracking-wide">
+                  {isEn ? 'Secured Payments' : 'Metode Pembayaran Aman'}
+                </span>
+                <span className="text-[11px] text-slate-500 block mt-0.5">
+                  {isEn ? 'We support Bank Transfer, QRIS, E-Wallet, VA & Credit Card' : 'Mendukung Transfer Bank, QRIS, GoPay, OVO, DANA, VA & Kartu Kredit'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-mono bg-indigo-50 border border-indigo-100/50 text-indigo-700 px-3 py-1 rounded-full font-bold">
+                🔒 SSL Secure Encryption
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>

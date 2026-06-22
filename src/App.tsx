@@ -22,6 +22,7 @@ import About from './pages/public/About';
 import AdminLogin from './pages/public/AdminLogin';
 
 import ProductDetail from './pages/public/ProductDetail';
+import SimulatedDoku from './pages/public/SimulatedDoku';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Admin Pages
@@ -60,6 +61,10 @@ export default function App() {
               {/* Splash Route */}
               <Route path="/" element={<Splash />} />
               <Route path="/en" element={<Splash />} />
+
+              {/* Simulated Doku Checkout */}
+              <Route path="/checkout/simulated-doku/:orderId" element={<SimulatedDoku />} />
+              <Route path="/en/checkout/simulated-doku/:orderId" element={<SimulatedDoku />} />
 
               {/* Public Routes */}
               <Route element={<PublicLayout />}>

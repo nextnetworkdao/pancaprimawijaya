@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import multer from 'multer';
 import sharp from 'sharp';
@@ -10,6 +11,160 @@ import { GoogleGenAI, Type } from "@google/genai";
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_KXPcOL8yei6r@ep-restless-waterfall-aocnkn4e-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
 });
+
+async function seedDefaultPages(pool: Pool) {
+  try {
+    const list = [
+      {
+        id: 'PAGE-privacy',
+        title: 'Kebijakan Privasi & Metode Pembayaran',
+        slug: 'kebijakan-privasi',
+        content: `<h2>Kebijakan Privasi (Privacy Policy)</h2>
+<p>PT Panca Prima Wijaya berkomitmen untuk melindungi privasi data pribadi Anda saat menggunakan platform kami. Halaman ini menjelaskan bagaimana kami mengumpulkan, menggunakan, dan melindungi data Anda.</p>
+<h3>Metode Pembayaran (Payment Methods)</h3>
+<h4>Pembayaran yang Kami Terima</h4>
+<p>Kami menerima berbagai metode pembayaran untuk memudahkan pelanggan kami:</p>
+<ul>
+  <li><strong>Transfer Bank:</strong> BCA, Mandiri, BNI, BRI</li>
+  <li><strong>E-Wallet:</strong> GoPay, OVO, DANA, ShopeePay</li>
+  <li><strong>Virtual Account:</strong> BCA Virtual Account, BNI Virtual Account, Mandiri Virtual Account, Permata Virtual Account</li>
+  <li><strong>QRIS:</strong> Pembayaran dapat dilakukan menggunakan QRIS yang mendukung seluruh aplikasi pembayaran digital di Indonesia.</li>
+  <li><strong>Kartu Kredit &amp; Debit:</strong> Kami menerima pembayaran menggunakan kartu kredit dan debit yang didukung oleh payment gateway resmi.</li>
+  <li><strong>Keamanan Transaksi:</strong> Seluruh transaksi diproses melalui sistem pembayaran yang aman dan terenkripsi untuk menjaga keamanan data pelanggan.</li>
+</ul>`,
+        seotitle: 'Kebijakan Privasi & Metode Pembayaran | PT Panca Prima Wijaya',
+        seodescription: 'Informasi lengkap tentang Kebijakan Privasi dan daftar lengkap metode pembayaran aman yang diterima oleh PT Panca Prima Wijaya.',
+        status: 'publish',
+        title_en: 'Privacy Policy & Payment Methods',
+        slug_en: 'privacy-policy',
+        content_en: `<h2>Privacy Policy</h2>
+<p>PT Panca Prima Wijaya is committed to protecting your personal data privacy while utilizing our platform. This page details how we collect, use, and secure your information.</p>
+<h3>Payment Methods</h3>
+<h4>Payments We Accept</h4>
+<p>We accept various payment methods to facilitate our customers:</p>
+<ul>
+  <li><strong>Bank Transfer:</strong> BCA, Mandiri, BNI, BRI</li>
+  <li><strong>E-Wallet:</strong> GoPay, OVO, DANA, ShopeePay</li>
+  <li><strong>Virtual Account:</strong> BCA Virtual Account, BNI Virtual Account, Mandiri Virtual Account, Permata Virtual Account</li>
+  <li><strong>QRIS:</strong> Payments can be made using QRIS, which supports all digital payment applications in Indonesia.</li>
+  <li><strong>Credit &amp; Debit Cards:</strong> We accept payments using credit and debit cards backed by official payment gateways.</li>
+  <li><strong>Transaction Security:</strong> All transactions are processed through encrypted, secure payment systems to safeguard customer data.</li>
+</ul>`,
+        seotitle_en: 'Privacy Policy & Payment Methods | PT Panca Prima Wijaya',
+        seodescription_en: 'Complete details on our Privacy Policy and the secure payment methods accepted by PT Panca Prima Wijaya.'
+      },
+      {
+        id: 'PAGE-refund',
+        title: 'Kebijakan Pengembalian & Pengembalian Dana',
+        slug: 'kebijakan-pengembalian-dana',
+        content: `<h2>Kebijakan Pengembalian &amp; Pengembalian Dana</h2>
+<p>Komitmen kami adalah memberikan kepuasan maksimal kepada setiap pelanggan PT Panca Prima Wijaya. Jika Anda tidak sepenuhnya puas dengan transaksi Anda, kami siap membantu.</p>
+<h3>Ketentuan Pengembalian Barang:</h3>
+<ul>
+  <li>Permohonan pengembalian produk dapat diajukan dalam waktu maksimal 7 hari sejak produk diterima.</li>
+  <li>Produk harus dalam kondisi asli, segel belum terbuka, serta belum pernah digunakan.</li>
+  <li>Wajib menyertakan bukti pembelian atau invoice resmi serta video unboxing lengkap tanpa jeda.</li>
+</ul>
+<h3>Ketentuan Pengembalian Dana (Refund):</h3>
+<ul>
+  <li>Setelah produk pengembalian kami terima dan verifikasi berhasil, kami akan memproses pengembalian dana dalam waktu 3-5 hari kerja.</li>
+  <li>Pengembalian dana akan dikirimkan ke rekening bank asal atau e-wallet yang digunakan saat pembelian.</li>
+</ul>`,
+        seotitle: 'Kebijakan Pengembalian & Pengembalian Dana | PT Panca Prima Wijaya',
+        seodescription: 'Syarat dan prosedur pengajuan pengembalian produk dan pengembalian dana (refund) resmi di PT Panca Prima Wijaya.',
+        status: 'publish',
+        title_en: 'Return & Refund Policy',
+        slug_en: 'return-policy',
+        content_en: `<h2>Return &amp; Refund Policy</h2>
+<p>Our commitment is to deliver maximum satisfaction to every customer of PT Panca Prima Wijaya. If you are not entirely satisfied with your transaction, we are here to help.</p>
+<h3>Return Terms:</h3>
+<ul>
+  <li>Return requests can be submitted within a maximum of 7 days from product receipt.</li>
+  <li>The product must be in its original condition, sealed, and unused.</li>
+  <li>Must include proof of purchase or official invoice along with a complete, unedited unboxing video.</li>
+</ul>
+<h3>Refund Terms:</h3>
+<ul>
+  <li>Once the returned product is received and verification is successful, we will process your refund within 3-5 business days.</li>
+  <li>The refund will be sent to the original bank account or e-wallet used during purchase.</li>
+</ul>`,
+        seotitle_en: 'Return & Refund Policy | PT Panca Prima Wijaya',
+        seodescription_en: 'Terms and official procedures for product returns and refund claims at PT Panca Prima Wijaya.'
+      },
+      {
+        id: 'PAGE-terms',
+        title: 'Syarat & Ketentuan',
+        slug: 'syarat-ketentuan',
+        content: `<h2>Syarat &amp; Ketentuan (Terms &amp; Conditions)</h2>
+<p>Selamat datang di layanan resmi PT Panca Prima Wijaya. Dengan mengakses dan berbelanja di platform kami, Anda menyetujui seluruh ketentuan di bawah ini.</p>
+<h3>Ketentuan Penggunaan:</h3>
+<p>Seluruh materi, logo, dan konten yang ditampilkan di situs ini adalah milik sah PT Panca Prima Wijaya. Penggunaan tanpa izin tertulis adalah pelanggaran hak cipta.</p>
+<h3>Ketentuan Pembelian &amp; Garansi:</h3>
+<p>Seluruh produk saniter pelabuhan, fumigasi, dan sensor yang kami sediakan dijamin orisinalitasnya dan didukung oleh garansi resmi kami.</p>`,
+        seotitle: 'Syarat & Ketentuan Layanan | PT Panca Prima Wijaya',
+        seodescription: 'Syarat dan ketentuan umum penggunaan situs dan pembelian resmi produk PT Panca Prima Wijaya.',
+        status: 'publish',
+        title_en: 'Terms & Conditions',
+        slug_en: 'terms-conditions',
+        content_en: `<h2>Terms &amp; Conditions</h2>
+<p>Welcome to the official services of PT Panca Prima Wijaya. By accessing and purchasing on our platform, you agree to all the terms below.</p>
+<h3>Terms of Use:</h3>
+<p>All materials, logos, and content displayed on this site are the legal property of PT Panca Prima Wijaya. Unauthorized use is a copyright violation.</p>
+<h3>Purchase &amp; Warranty Terms:</h3>
+<p>All port sanitation, fumigation, and sensor products we provide are guaranteed authentic and backed by our official warranty.</p>`,
+        seotitle_en: 'Terms & Conditions | PT Panca Prima Wijaya',
+        seodescription_en: 'General terms and conditions of website usage and product purchasing at PT Panca Prima Wijaya.'
+      },
+      {
+        id: 'PAGE-contact',
+        title: 'Hubungi Kami',
+        slug: 'kontak',
+        content: `<h2>Hubungi PT Panca Prima Wijaya</h2>
+<p>Hubungi tim spesialis kami untuk bantuan konsultasi teknis, produk, atau pembelian massal.</p>
+<div class="mt-6 border border-gray-150 p-4 rounded-lg bg-gray-50">
+  <p class="mb-2"><strong>📍 Alamat Kantor:</strong> Ruko Golden Boulevard Blok C No. 9, BSD City, Tangerang, Banten, Indonesia</p>
+  <p class="mb-2"><strong>📞 WhatsApp Resmi:</strong> +62 853 1320 0188</p>
+  <p class="mb-0"><strong>✉️ Email:</strong> info@pancaprimawijaya.com</p>
+</div>`,
+        seotitle: 'Hubungi Kami | PT Panca Prima Wijaya',
+        seodescription: 'Kontak resmi, alamat kantor, WhatsApp, dan email PT Panca Prima Wijaya untuk layanan bantuan.',
+        status: 'publish',
+        title_en: 'Contact Us',
+        slug_en: 'contact',
+        content_en: `<h2>Contact PT Panca Prima Wijaya</h2>
+<p>Contact our specialist team for technical consulting, product inquiries, or bulk corporate purchases.</p>
+<div class="mt-6 border border-gray-150 p-4 rounded-lg bg-gray-50">
+  <p class="mb-2"><strong>📍 Office Address:</strong> Ruko Golden Boulevard Blok C No. 9, BSD City, Tangerang, Banten, Indonesia</p>
+  <p class="mb-2"><strong>📞 Official WhatsApp:</strong> +62 853 1320 0188</p>
+  <p class="mb-0"><strong>✉️ Email:</strong> info@pancaprimawijaya.com</p>
+</div>`,
+        seotitle_en: 'Contact Us | PT Panca Prima Wijaya',
+        seodescription_en: 'Official contact details, office address, WhatsApp, and email of PT Panca Prima Wijaya.'
+      }
+    ];
+
+    for (const p of list) {
+      await pool.query(`
+        INSERT INTO pages (id, title, slug, content, seotitle, seodescription, status, title_en, slug_en, content_en, seotitle_en, seodescription_en)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ON CONFLICT (id) DO UPDATE SET
+          title = EXCLUDED.title,
+          slug = EXCLUDED.slug,
+          content = EXCLUDED.content,
+          seotitle = EXCLUDED.seotitle,
+          seodescription = EXCLUDED.seodescription,
+          title_en = EXCLUDED.title_en,
+          slug_en = EXCLUDED.slug_en,
+          content_en = EXCLUDED.content_en,
+          seotitle_en = EXCLUDED.seotitle_en,
+          seodescription_en = EXCLUDED.seodescription_en
+      `, [p.id, p.title, p.slug, p.content, p.seotitle, p.seodescription, p.status, p.title_en, p.slug_en, p.content_en, p.seotitle_en, p.seodescription_en]);
+    }
+    console.log("Required Google Merchant policies pages verified/seeded successfully.");
+  } catch (e) {
+    console.error("Error seeding default policy pages:", e);
+  }
+}
 
 async function startServer() {
   const app = express();
@@ -75,6 +230,10 @@ async function startServer() {
       END $$;
 
       ALTER TABLE products ADD COLUMN IF NOT EXISTS gallery JSONB;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS gtin VARCHAR(100);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS mpn VARCHAR(100);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(255) DEFAULT 'PT Panca Prima Wijaya';
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS condition VARCHAR(100) DEFAULT 'new';
 
       ALTER TABLE pages ADD COLUMN IF NOT EXISTS canonical VARCHAR(255);
       ALTER TABLE pages ADD COLUMN IF NOT EXISTS robots VARCHAR(50);
@@ -141,6 +300,7 @@ async function startServer() {
       );
     `);
     console.log("Database tables verified/created successfully.");
+    await seedDefaultPages(pool);
     runDatabaseTranslationMigration(); // Trigger the background auto-translation migration
   } catch (err) {
     console.error("Failed to verify tables:", err);
@@ -915,8 +1075,8 @@ ${text}`
       }
 
       const { rows } = await pool.query(
-        'INSERT INTO products (id, name, slug, price, category, image, gallery, description, seoarticle, seotitle, seodescription, keywords, site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *',
-        [id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en]
+        'INSERT INTO products (id, name, slug, price, category, image, gallery, description, seoarticle, seotitle, seodescription, keywords, site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, gtin, mpn, brand, condition) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING *',
+        [id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, b.gtin || '', b.mpn || '', b.brand || 'PT Panca Prima Wijaya', b.condition || 'new']
       );
       res.status(201).json(rows[0]);
     } catch (e) {
@@ -958,8 +1118,8 @@ ${text}`
       }
 
       const { rows } = await pool.query(
-        'UPDATE products SET name = $2, slug = $3, price = $4, category = $5, image = $6, gallery = $7, description = $8, seoarticle = $9, seotitle = $10, seodescription = $11, keywords = $12, site = $13, name_en = $14, slug_en = $15, description_en = $16, seoarticle_en = $17, seotitle_en = $18, seodescription_en = $19, keywords_en = $20, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-        [req.params.id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en]
+        'UPDATE products SET name = $2, slug = $3, price = $4, category = $5, image = $6, gallery = $7, description = $8, seoarticle = $9, seotitle = $10, seodescription = $11, keywords = $12, site = $13, name_en = $14, slug_en = $15, description_en = $16, seoarticle_en = $17, seotitle_en = $18, seodescription_en = $19, keywords_en = $20, gtin = $21, mpn = $22, brand = $23, condition = $24, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+        [req.params.id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, b.gtin || '', b.mpn || '', b.brand || 'PT Panca Prima Wijaya', b.condition || 'new']
       );
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
     } catch (e) {
@@ -978,30 +1138,235 @@ ${text}`
     }
   });
 
+  // GET all orders mapped robustly
   app.get('/api/orders', async (req, res) => {
     try {
       const { rows } = await pool.query('SELECT * FROM orders ORDER BY "createdat" DESC');
-      res.json(rows);
+      const mappedOrders = rows.map(r => ({
+        id: r.id,
+        date: r.createdat,
+        total: parseFloat(r.total),
+        status: r.status,
+        customer: typeof r.customer === 'string' ? JSON.parse(r.customer) : r.customer,
+        items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items
+      }));
+      res.json(mappedOrders);
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB Error' });
     }
   });
 
-  app.post('/api/orders', async (req, res) => {
+  // GET single order details
+  app.get('/api/orders/:id', async (req, res) => {
     try {
-      const id = 'ORD-' + Date.now().toString();
-      const status = 'Paid - Gateway Verified';
-      const b = req.body;
-      const { rows } = await pool.query(
-        'INSERT INTO orders (id, customer, items, total, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [id, b.customer, b.items, b.total || 0, status]
-      );
-      console.log(`[PUSH NOTIF] New order ${id} received!`);
-      res.status(201).json(rows[0]);
+      const { rows } = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      const order = rows[0];
+      res.json({
+        id: order.id,
+        total: parseFloat(order.total),
+        status: order.status,
+        customer: typeof order.customer === 'string' ? JSON.parse(order.customer) : order.customer,
+        items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
+        date: order.createdat
+      });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB Error' });
+    }
+  });
+
+  // POST new order with DOKU redirection / simulation logic
+  app.post('/api/orders', async (req, res) => {
+    try {
+      const id = 'ORD-' + Date.now().toString();
+      const b = req.body;
+      const amount = Math.round(Number(b.total) || 0);
+
+      const clientId = process.env.DOKU_CLIENT_ID;
+      const secretKey = process.env.DOKU_SECRET_KEY;
+      const isProduction = process.env.DOKU_IS_PRODUCTION === 'true';
+      const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+
+      let redirectUrl = `${baseUrl}/checkout/simulated-doku/${id}`;
+      let isSimulated = true;
+      let dbStatus = 'Awaiting Payment - DOKU Sandbox';
+
+      // If DOKU keys are configured, make a real API request to Jokul Checkout API
+      if (clientId && secretKey) {
+        try {
+          const endpoint = isProduction 
+            ? 'https://api.doku.com/checkout/v1/payment'
+            : 'https://api-sandbox.doku.com/checkout/v1/payment';
+          
+          const requestTarget = '/checkout/v1/payment';
+          const invoiceNumber = `INV-${id}`;
+
+          const requestBody = {
+            order: {
+              amount: amount,
+              invoice_number: invoiceNumber,
+              currency: 'IDR',
+              callback_url: `${baseUrl}/api/doku/callback`,
+              line_items: b.items.map((i: any) => ({
+                name: `Product ID: ${i.productId}`,
+                price: Math.round(amount / (b.items.length || 1)),
+                quantity: Number(i.quantity) || 1
+              }))
+            },
+            customer: {
+              name: b.customer?.name || 'Customer',
+              email: b.customer?.email || 'customer@example.com'
+            }
+          };
+
+          const rawBody = JSON.stringify(requestBody);
+          const digest = crypto.createHash('sha256').update(rawBody).digest('base64');
+          
+          const requestId = 'REQ-' + Date.now().toString() + '-' + Math.floor(Math.random() * 1000);
+          const requestTimestamp = new Date().toISOString().slice(0, 19) + 'Z'; // YYYY-MM-DDTHH:mm:ssZ
+          
+          const stringToSign = `Client-Id:${clientId}\n` +
+                               `Request-Id:${requestId}\n` +
+                               `Request-Timestamp:${requestTimestamp}\n` +
+                               `Request-Target:${requestTarget}\n` +
+                               `Digest:${digest}`;
+                               
+          const signatureVal = crypto.createHmac('sha256', secretKey).update(stringToSign).digest('base64');
+
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Client-Id': clientId,
+              'Request-Id': requestId,
+              'Request-Timestamp': requestTimestamp,
+              'Signature': `HMACSHA256=${signatureVal}`,
+              'Content-Type': 'application/json'
+            },
+            body: rawBody
+          });
+
+          if (response.ok) {
+            const resData: any = await response.json();
+            if (resData?.response?.payment?.url) {
+              redirectUrl = resData.response.payment.url;
+              isSimulated = false;
+              dbStatus = 'Awaiting Payment - DOKU Real Gateway';
+              console.log(`[DOKU API SUCCESS] Redirect URL generated for ${id}: ${redirectUrl}`);
+            } else {
+              console.error('DOKU response parsing failed or omitted payment URL:', resData);
+            }
+          } else {
+            const errText = await response.text();
+            console.error('DOKU API Error response status:', response.status, 'Body:', errText);
+          }
+        } catch (apiErr) {
+          console.error('Critical warning: Failing communication with external DOKU API, falling back to simulator:', apiErr);
+        }
+      }
+
+      // Save order to Postgres DB
+      const { rows } = await pool.query(
+        'INSERT INTO orders (id, customer, items, total, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [id, JSON.stringify(b.customer), JSON.stringify(b.items), amount, dbStatus]
+      );
+
+      console.log(`[PUSH NOTIF] New order ${id} logged with status: ${dbStatus}`);
+      res.status(201).json({
+        ...rows[0],
+        paymentUrl: redirectUrl,
+        isSimulated: isSimulated
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB Error' });
+    }
+  });
+
+  // POST DOKU simulating success pay
+  app.post('/api/doku/simulate-success', async (req, res) => {
+    try {
+      const { orderId } = req.body;
+      const { rowCount } = await pool.query(
+        "UPDATE orders SET status = 'Paid - Verified via DOKU' WHERE id = $1",
+        [orderId]
+      );
+      if (rowCount === 0) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      console.log(`[PUSH NOTIF] Automated simulation webhook processed successfully for order ${orderId}`);
+      res.json({ success: true });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB / Simulator Error' });
+    }
+  });
+
+  // POST DOKU real webhook callback listener
+  app.post('/api/doku/callback', async (req, res) => {
+    try {
+      const notification = req.body;
+      console.log('Received authentic DOKU payment notification webhook:', notification);
+
+      // Verify the signature if DOKU Secret Key is present
+      const secretKey = process.env.DOKU_SECRET_KEY;
+      const merchantSignature = req.headers['signature'];
+      
+      let isValidSignature = true;
+
+      if (secretKey && merchantSignature) {
+        // Construct notification signature validation string style
+        const notifyBodyRaw = JSON.stringify(notification);
+        const digest = crypto.createHash('sha256').update(notifyBodyRaw).digest('base64');
+        
+        const timestampHeader = req.headers['request-timestamp'];
+        const idHeader = req.headers['request-id'];
+        const clientIdHeader = req.headers['client-id'];
+        
+        const stringToSign = `Client-Id:${clientIdHeader}\n` +
+                             `Request-Id:${idHeader}\n` +
+                             `Request-Timestamp:${timestampHeader}\n` +
+                             `Request-Target:/api/doku/callback\n` +
+                             `Digest:${digest}`;
+                             
+        const computedSig = crypto.createHmac('sha256', secretKey).update(stringToSign).digest('base64');
+        const expectedSignature = `HMACSHA256=${computedSig}`;
+        
+        if (merchantSignature !== expectedSignature) {
+          console.warn('DOKU signature validation mismatch! Received:', merchantSignature, 'Expected:', expectedSignature);
+          isValidSignature = false;
+        }
+      }
+
+      if (!isValidSignature) {
+        return res.status(400).send('Invalid Signature');
+      }
+
+      // Process payment details
+      const invoiceNumber = notification?.order?.invoice_number;
+      const transactionStatus = notification?.transaction?.status;
+
+      if (invoiceNumber && (transactionStatus === 'SUCCESS' || transactionStatus === 'Paid')) {
+        // Find corresponding Order ID
+        // invoiceNumber matches our format `INV-${id}` where id starts with `ORD-`
+        const orderId = invoiceNumber.substring(4); // trim 'INV-' prefix
+        
+        const { rowCount } = await pool.query(
+          "UPDATE orders SET status = 'Paid - Verified via DOKU' WHERE id = $1",
+          [orderId]
+        );
+        if (rowCount > 0) {
+          console.log(`[DOKU SUCCESS WEBHOOK] Marked order ${orderId} as successfully paid!`);
+        }
+      }
+
+      res.status(200).send('OK');
+    } catch (e) {
+      console.error('DOKU webhook engine caught an issue:', e);
+      res.status(500).send('Notification processing failed');
     }
   });
 
@@ -1487,6 +1852,248 @@ ${text}`
       </sitemapindex>`;
     res.header('Content-Type', 'application/xml');
     res.send(sitemap.trim());
+  });
+  
+  app.get('/google-merchant.xsl', (req, res) => {
+    res.header('Content-Type', 'text/xsl');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet version="2.0" 
+                xmlns:html="http://www.w3.org/TR/REC-html40"
+                xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                xmlns:g="http://base.google.com/ns/1.0">
+  <xsl:output method="html" version="1.0" encoding="UTF-8" indent="yes"/>
+  <xsl:template match="/">
+    <html xmlns="http://www.w3.org/1999/xhtml">
+      <head>
+        <title>Google Merchant XML Feed</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <style type="text/css">
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; margin: 0; color: #333; background-color: #f8fafc; }
+          #header { background-color: #1e293b; color: #fff; padding: 40px; border-bottom: 4px solid #f97316; }
+          #header h1 { margin: 0 0 10px 0; font-size: 26px; font-weight: 850; letter-spacing: -0.025em; display: flex; align-items: center; gap: 10px; }
+          #header p { margin: 0 0 10px 0; font-size: 14px; color: #cbd5e1; line-height: 1.5; }
+          #header a { color: #f97316; text-decoration: none; font-weight: 600; }
+          #header a:hover { text-decoration: underline; }
+          #content { padding: 40px; background-color: #fff; max-w: 1450px; margin: 0 auto; min-height: 500px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+          .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+          .badge-orange { background-color: #ffedd5; color: #ea580c; border: 1px solid #fed7aa; }
+          .badge-blue { background-color: #dbeafe; color: #2563eb; border: 1px solid #bfdbfe; }
+          .badge-green { background-color: #dcfce7; color: #16a34a; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 20px; }
+          th { text-align: left; padding: 14px 12px; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; background-color: #f1f5f9; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+          td { padding: 16px 12px; border-bottom: 1px solid #cbd5e1; color: #334155; vertical-align: top; }
+          tr:hover td { background-color: #f8fafc; }
+          .prod-img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; }
+          .prod-title { font-weight: 800; color: #1e293b; font-size: 14px; text-decoration: none; display: block; margin-bottom: 4px; }
+          .prod-title:hover { color: #2563eb; text-decoration: underline; }
+          .prod-desc { font-size: 11px; color: #64748b; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+          .price-tag { font-family: monospace; font-weight: 700; color: #0f172a; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+        </style>
+      </head>
+      <body>
+        <div id="header">
+          <h1>🛍️ Google Merchant Feed</h1>
+          <p>Dibuat secara dinamis untuk mendeteksi toko yang berbeda (<strong>PT Panca Prima Wijaya atau SensorGempa</strong>). XML feed ini memenuhi aturan Google Merchant Center (Mandatory Fields, Structured Data, Identifikasi GTIN/MPN).</p>
+          <p>Feed ini berisi <strong style="color: #ff9f1c;"><xsl:value-of select="count(rss/channel/item)"/></strong> produk aktif.</p>
+        </div>
+        <div id="content">
+          <div class="breadcrumb" style="display: flex; gap: 8px; align-items: center; margin-bottom: 15px; color: #64748b; font-weight: 600; font-size: 13px;">
+            <span>Situs Utama</span> &#8250; 
+            <span class="badge badge-orange"><xsl:value-of select="rss/channel/title"/></span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 70px;">Gambar</th>
+                <th>ID &amp; Informasi Produk</th>
+                <th>Merek (Brand)</th>
+                <th>Kondisi</th>
+                <th>GTIN (Barcode)</th>
+                <th>MPN (Part No.)</th>
+                <th>Harga (Price)</th>
+                <th>Stok</th>
+              </tr>
+            </thead>
+            <tbody>
+              <xsl:for-each select="rss/channel/item">
+                <tr>
+                  <td>
+                    <xsl:variable name="imgURL"><xsl:value-of select="g:image_link"/></xsl:variable>
+                    <a href="{g:link}" target="_blank">
+                      <img src="{$imgURL}" class="prod-img" alt="Product Image" />
+                    </a>
+                  </td>
+                  <td>
+                    <a href="{g:link}" class="prod-title" target="_blank"><xsl:value-of select="g:title"/></a>
+                    <span class="prod-desc"><xsl:value-of select="g:description"/></span>
+                  </td>
+                  <td>
+                    <strong><xsl:value-of select="g:brand"/></strong>
+                  </td>
+                  <td>
+                    <xsl:choose>
+                      <xsl:when test="g:condition = 'new'">
+                        <span class="badge badge-blue">Baru (New)</span>
+                      </xsl:when>
+                      <xsl:otherwise>
+                        <span class="badge badge-orange"><xsl:value-of select="g:condition"/></span>
+                      </xsl:otherwise>
+                    </xsl:choose>
+                  </td>
+                  <td style="font-family: monospace; font-weight: bold;">
+                    <xsl:value-of select="g:gtin"/>
+                  </td>
+                  <td style="font-family: monospace;">
+                    <xsl:value-of select="g:mpn"/>
+                  </td>
+                  <td>
+                    <span class="price-tag"><xsl:value-of select="g:price"/></span>
+                  </td>
+                  <td>
+                    <span class="badge" style="background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">
+                      <xsl:value-of select="g:availability"/>
+                    </span>
+                  </td>
+                </tr>
+              </xsl:for-each>
+            </tbody>
+          </table>
+        </div>
+      </body>
+    </html>
+  </xsl:template>
+</xsl:stylesheet>
+`);
+  });
+
+  const generateGoogleMerchantFeed = (products: any[], baseUrl: string, siteName: string) => {
+    let itemsXml = '';
+    for (const prod of products) {
+      const descClean = (prod.description || '')
+        .replace(/<[^>]*>/g, '') // remove HTML tags
+        .replace(/[&<>'"]/g, (c: string) => {
+          switch (c) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&apos;';
+            default: return c;
+          }
+        })
+        .substring(0, 4500)
+        .trim();
+
+      const titleEscaped = (prod.name || '')
+        .replace(/[&<>'"]/g, (c: string) => {
+          switch (c) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&apos;';
+            default: return c;
+          }
+        });
+
+      const brandEscaped = (prod.brand || (prod.site === 'sensor' ? 'Toyo Automation' : 'PT Panca Prima Wijaya'))
+        .replace(/[&<>'"]/g, (c: string) => {
+          switch (c) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&apos;';
+            default: return c;
+          }
+        });
+
+      // Determine link based on site
+      const sitePath = prod.site === 'sensor' ? '/sensor/produk/' : '/panca/produk/';
+      const link = `${baseUrl}${sitePath}${prod.slug}`;
+
+      // Build image url
+      let imageUrl = prod.image || '';
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+      }
+
+      const priceNum = Number(prod.price) || 0;
+      const formattedPrice = `${priceNum} IDR`;
+
+      const conditionVal = prod.condition || 'new';
+
+      const gtinTag = prod.gtin ? `<g:gtin>${prod.gtin}</g:gtin>` : '';
+      const mpnTag = prod.mpn ? `<g:mpn>${prod.mpn}</g:mpn>` : '';
+
+      itemsXml += `
+    <item>
+      <g:id>${prod.id}</g:id>
+      <g:title>${titleEscaped}</g:title>
+      <g:description>${descClean || titleEscaped}</g:description>
+      <g:link>${link}</g:link>
+      <g:image_link>${imageUrl || 'https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png'}</g:image_link>
+      <g:price>${formattedPrice}</g:price>
+      <g:availability>in_stock</g:availability>
+      <g:condition>${conditionVal}</g:condition>
+      <g:brand>${brandEscaped}</g:brand>
+      ${gtinTag}
+      ${mpnTag}
+      <g:google_product_category>Business &amp; Industrial &gt; Agriculture</g:google_product_category>
+    </item>`;
+    }
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="/google-merchant.xsl"?>
+<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
+  <channel>
+    <title>${siteName}</title>
+    <link>${baseUrl}</link>
+    <description>Dynamic Google Merchant Center Product Feed for ${siteName}</description>
+    <language>id</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    ${itemsXml}
+  </channel>
+</rss>`;
+  };
+
+  app.get('/google-merchant.xml', async (req, res) => {
+    try {
+      const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+      const { rows: products } = await pool.query('SELECT * FROM products ORDER BY "createdat" DESC');
+      const feedXml = generateGoogleMerchantFeed(products, baseUrl, 'Gabungan PT Panca Prima &amp; Sensor');
+      res.header('Content-Type', 'application/xml; charset=utf-8');
+      res.send(feedXml.trim());
+    } catch (e) {
+      console.error('Error generating general google-merchant.xml:', e);
+      res.status(500).send('Error generating Google Merchant Feed');
+    }
+  });
+
+  app.get(['/sensor/google-merchant.xml', '/en/sensor/google-merchant.xml'], async (req, res) => {
+    try {
+      const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+      const { rows: products } = await pool.query("SELECT * FROM products WHERE site = 'sensor' ORDER BY 'createdat' DESC");
+      const feedXml = generateGoogleMerchantFeed(products, baseUrl, 'SensorGempa / Toyo Automation');
+      res.header('Content-Type', 'application/xml; charset=utf-8');
+      res.send(feedXml.trim());
+    } catch (e) {
+      console.error('Error generating sensor google-merchant.xml:', e);
+      res.status(500).send('Error');
+    }
+  });
+
+  app.get(['/panca/google-merchant.xml', '/en/panca/google-merchant.xml'], async (req, res) => {
+    try {
+      const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+      const { rows: products } = await pool.query("SELECT * FROM products WHERE site = 'panca' OR site IS NULL ORDER BY 'createdat' DESC");
+      const feedXml = generateGoogleMerchantFeed(products, baseUrl, 'PT Panca Prima Wijaya');
+      res.header('Content-Type', 'application/xml; charset=utf-8');
+      res.send(feedXml.trim());
+    } catch (e) {
+      console.error('Error generating panca google-merchant.xml:', e);
+      res.status(500).send('Error');
+    }
   });
 
   app.get('/sitemap.xml', async (req, res) => {

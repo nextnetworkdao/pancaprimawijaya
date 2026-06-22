@@ -70,6 +70,10 @@ export interface Product {
   seotitle_en?: string;
   seodescription_en?: string;
   keywords_en?: string;
+  gtin?: string;
+  mpn?: string;
+  brand?: string;
+  condition?: string;
 }
 
 export interface BlockStyle {

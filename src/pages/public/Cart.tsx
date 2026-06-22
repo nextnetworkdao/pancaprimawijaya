@@ -32,13 +32,25 @@ export default function Cart() {
     };
 
     try {
-      await fetch('/api/orders', {
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      setSuccess(true);
+      
+      if (!response.ok) {
+        throw new Error("Gagal membuat pesanan");
+      }
+      
+      const resData = await response.json();
       clearCartBySite(site);
+      
+      if (resData.paymentUrl) {
+        // Redirect to DOKU page (either real sandbox/production or standalone sandbox simulator)
+        window.location.href = resData.paymentUrl;
+      } else {
+        setSuccess(true);
+      }
     } catch (err) {
       alert("Terjadi kesalahan sistem pembayaran.");
     } finally {

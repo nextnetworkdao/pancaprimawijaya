@@ -228,6 +228,25 @@ export default function AdminProductForm() {
                 <label className="text-[13px] font-semibold w-1/4">Harga Rutin (Rp)</label>
                 <input required type="number" name="price" value={formData.price || 0} onChange={handleChange} className="flex-1 w-full max-w-xs px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px]" />
               </div>
+              <div className="flex flex-col md:flex-row gap-4 md:items-center">
+                <label className="text-[13px] font-semibold w-1/4">Merek (Brand)</label>
+                <input type="text" name="brand" value={formData.brand || ''} onChange={handleChange} placeholder="Misal: PT Panca Prima Wijaya" className="flex-1 w-full max-w-xs px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px]" />
+              </div>
+              <div className="flex flex-col md:flex-row gap-4 md:items-center">
+                <label className="text-[13px] font-semibold w-1/4">Kondisi (Condition)</label>
+                <select name="condition" value={formData.condition || 'new'} onChange={handleChange} className="flex-1 w-full max-w-xs px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px] bg-white">
+                  <option value="new">Baru (New)</option>
+                  <option value="used">Bekas (Used)</option>
+                </select>
+              </div>
+              <div className="flex flex-col md:flex-row gap-4 md:items-center">
+                <label className="text-[13px] font-semibold w-1/4">GTIN (EAN/UPC/ISBN)</label>
+                <input type="text" name="gtin" value={formData.gtin || ''} onChange={handleChange} placeholder="Nomor Identifikasi Produk (EAN/UPC)" className="flex-1 w-full max-w-xs px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px]" />
+              </div>
+              <div className="flex flex-col md:flex-row gap-4 md:items-center">
+                <label className="text-[13px] font-semibold w-1/4">MPN (Part Number)</label>
+                <input type="text" name="mpn" value={formData.mpn || ''} onChange={handleChange} placeholder="Manufacturer Part Number" className="flex-1 w-full max-w-xs px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px]" />
+              </div>
               <div className="flex flex-col md:flex-row gap-4 md:items-start">
                 <label className="text-[13px] font-semibold w-1/4 mt-1">Deskripsi & Detail</label>
                 <textarea required name="description" value={formData.description || ''} onChange={handleChange} rows={5} className="flex-1 w-full px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px]" />
