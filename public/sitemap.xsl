@@ -3,6 +3,7 @@
                 xmlns:html="http://www.w3.org/TR/REC-html40"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9"
+                xmlns:custom="http://pancaprimawijaya.com/custom"
                 xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <xsl:output method="html" version="1.0" encoding="UTF-8" indent="yes"/>
   <xsl:template match="/">
@@ -124,6 +125,12 @@
             background-color: #fef9c3;
             color: #a16207;
           }
+          .badge-count {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            font-weight: 700;
+            font-family: monospace;
+          }
           .info-count {
             display: inline-block;
             background-color: #38bdf8;
@@ -174,8 +181,9 @@
                 <table>
                   <thead>
                     <tr>
-                      <th style="width: 70%;">Sitemap URL</th>
-                      <th style="width: 30%;">Pembaruan Terakhir</th>
+                      <th style="width: 55%;">Sitemap URL</th>
+                      <th style="width: 20%; text-align: center;">URL Count</th>
+                      <th style="width: 25%;">Pembaruan Terakhir</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -185,10 +193,22 @@
                           <xsl:variable name="itemURL"><xsl:value-of select="sitemap:loc"/></xsl:variable>
                           <a href="{$itemURL}"><xsl:value-of select="sitemap:loc"/></a>
                         </td>
+                        <td style="text-align: center;">
+                          <span class="badge badge-count">
+                            <xsl:value-of select="custom:count"/>
+                          </span>
+                        </td>
                         <td>
-                          <xsl:value-of select="substring-before(sitemap:lastmod, 'T')"/>
-                          <xsl:text> </xsl:text>
-                          <xsl:value-of select="substring(substring-after(sitemap:lastmod, 'T'), 1, 5)"/>
+                          <xsl:choose>
+                            <xsl:when test="contains(sitemap:lastmod, 'T')">
+                              <xsl:value-of select="substring-before(sitemap:lastmod, 'T')"/>
+                              <xsl:text> </xsl:text>
+                              <xsl:value-of select="substring(substring-after(sitemap:lastmod, 'T'), 1, 5)"/>
+                            </xsl:when>
+                            <xsl:otherwise>
+                              <xsl:value-of select="sitemap:lastmod"/>
+                            </xsl:otherwise>
+                          </xsl:choose>
                         </td>
                       </tr>
                     </xsl:for-each>
@@ -234,7 +254,16 @@
                           </xsl:choose>
                         </td>
                         <td>
-                          <xsl:value-of select="substring-before(sitemap:lastmod, 'T')"/>
+                          <xsl:choose>
+                            <xsl:when test="contains(sitemap:lastmod, 'T')">
+                              <xsl:value-of select="substring-before(sitemap:lastmod, 'T')"/>
+                              <xsl:text> </xsl:text>
+                              <xsl:value-of select="substring(substring-after(sitemap:lastmod, 'T'), 1, 5)"/>
+                            </xsl:when>
+                            <xsl:otherwise>
+                              <xsl:value-of select="sitemap:lastmod"/>
+                            </xsl:otherwise>
+                          </xsl:choose>
                           <xsl:if test="not(sitemap:lastmod)">
                             <span style="color: #cbd5e1;">-</span>
                           </xsl:if>
