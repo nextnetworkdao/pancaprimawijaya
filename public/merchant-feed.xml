@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
+  <channel>
+    <title>PT Panca Prima Wijaya &amp; SensorGempa Product Feed</title>
+    <link>http://pancaprimawijaya.web.id</link>
+    <description>Kumpulan produk fumigasi pangan, insektisida, dan sensor gempa berkualitas tinggi terpercaya di Indonesia oleh PT Panca Prima Wijaya.</description>
+    
+    <!-- Produk 1: FUMIPHOS® 56 TB -->
+    <item>
+      <g:id>panca-01</g:id>
+      <g:title>FUMIPHOS® 56 TB - Obat Kutu Beras / Fumigan Aluminium Phosphide</g:title>
+      <g:description>FUMIPHOS adalah fumigan Aluminium Phosphide berbentuk tablet yang efektif membasmi hama gudang seperti kutu beras, kutu jagung, kutu kopi, dan ulat tembakau pada komoditas pangan tersimpan. Aman, terdaftar resmi di Kementerian Pertanian RI, dan dilengkapi dokumen MSDS serta CoA.</g:description>
+      <g:link>http://pancaprimawijaya.web.id/panca/produk/fumiphos</g:link>
+      <g:image_link>https://ik.imagekit.io/cej2dcwlx/foto%20fumiphos.png</g:image_link>
+      <g:condition>new</g:condition>
+      <g:availability>in stock</g:availability>
+      <g:price>1150000 IDR</g:price>
+      <g:brand>PT Panca Prima Wijaya</g:brand>
+      <g:google_product_category>Business &amp; Industrial &gt; Agriculture &gt; Pest Control</g:google_product_category>
+      <g:mpn>FUMIPHOS-56TB</g:mpn>
+    </item>
+
+    <!-- Produk 2: SILOGUD® 250 EC -->
+    <item>
+      <g:id>panca-02</g:id>
+      <g:title>SILOGUD® 250 EC - Insektisida Cair Pembasmi Kutu / Sanitasi Gudang</g:title>
+      <g:description>SILOGUD 250 EC adalah formulasi insektisida cair premium yang dikembangkan secara khusus untuk sanitasi gudang pakan dan pangan. Mampu mengendalikan hama resisten secara cepat melalui metode penyemprotan (spraying) maupun pengasapan (fogging).</g:description>
+      <g:link>http://pancaprimawijaya.web.id/panca/produk/silogud</g:link>
+      <g:image_link>https://ik.imagekit.io/cej2dcwlx/foto%20silogud.png</g:image_link>
+      <g:condition>new</g:condition>
+      <g:availability>in stock</g:availability>
+      <g:price>850000 IDR</g:price>
+      <g:brand>PT Panca Prima Wijaya</g:brand>
+      <g:google_product_category>Business &amp; Industrial &gt; Agriculture &gt; Pest Control</g:google_product_category>
+      <g:mpn>SILOGUD-250EC</g:mpn>
+    </item>
+
+    <!-- Produk 3: Toyo Earthquake Sensor -->
+    <item>
+      <g:id>sensor-01</g:id>
+      <g:title>Toyo Sensor Gempa Bumi &amp; Early Warning System</g:title>
+      <g:description>Sistem sensor gempa bumi otomatis profesional dari Toyo. Dirancang secara presisi untuk mendeteksi getaran seismik berbahaya, mengaktifkan rem darurat otomatis elevator/lift gedung, dan membunyikan alarm peringatan dini guna meminimalisir risiko jatuhnya korban jiwa.</g:description>
+      <g:link>http://pancaprimawijaya.web.id/sensor/sensor-gempa</g:link>
+      <g:image_link>https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png</g:image_link>
+      <g:condition>new</g:condition>
+      <g:availability>in stock</g:availability>
+      <g:price>15000000 IDR</g:price>
+      <g:brand>SensorGempa</g:brand>
+      <g:google_product_category>Business &amp; Industrial &gt; Science &gt; Seismographs</g:google_product_category>
+      <g:mpn>TOYO-EQS-01</g:mpn>
+    </item>
+  </channel>
+</rss>

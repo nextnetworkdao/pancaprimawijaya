@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://pancaprimawijaya.com/sitemap.xml
-Sitemap: https://sensor.pancaprimawijaya.com/sitemap.xml
+Sitemap: http://pancaprimawijaya.web.id/sitemap.xml
+Sitemap: http://sensor.pancaprimawijaya.web.id/sitemap.xml

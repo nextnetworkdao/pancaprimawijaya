@@ -20,7 +20,7 @@ export function SEO({ title, description, keywords, type = 'website', image, can
     "@type": "Article",
     "headline": title,
     "description": description,
-    "image": image || "https://www.pancaprimawijaya.com/logo.png",
+    "image": image || "http://pancaprimawijaya.web.id/logo.png",
     "author": {
       "@type": "Organization",
       "name": "PT Panca Prima Wijaya"
@@ -30,14 +30,14 @@ export function SEO({ title, description, keywords, type = 'website', image, can
       "name": "PT Panca Prima Wijaya",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://www.pancaprimawijaya.com/logo.png"
+        "url": "http://pancaprimawijaya.web.id/logo.png"
       }
     }
   } : {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "PT Panca Prima Wijaya",
-    "url": "https://www.pancaprimawijaya.com",
+    "url": "http://pancaprimawijaya.web.id",
     "description": description,
     "sameAs": []
   };
@@ -47,7 +47,7 @@ export function SEO({ title, description, keywords, type = 'website', image, can
        "@type": "Product",
        "name": title,
        "description": description,
-       "image": image || "https://www.pancaprimawijaya.com/logo.png",
+       "image": image || "http://pancaprimawijaya.web.id/logo.png",
        "brand": {
          "@type": "Brand",
          "name": "PT Panca Prima Wijaya"

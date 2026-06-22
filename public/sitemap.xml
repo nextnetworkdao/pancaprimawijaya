@@ -1,20 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <!-- Splash / Intro -->
   <url>
-    <loc>https://pancaprimawijaya.com/</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en" />
+    <loc>http://pancaprimawijaya.web.id/</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en" />
+    <loc>http://pancaprimawijaya.web.id/en</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
@@ -22,17 +23,17 @@
 
   <!-- PT Panca Prima Wijaya Home -->
   <url>
-    <loc>https://pancaprimawijaya.com/panca</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca" />
+    <loc>http://pancaprimawijaya.web.id/panca</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/panca" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/panca" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/panca</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca" />
+    <loc>http://pancaprimawijaya.web.id/en/panca</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/panca" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/panca" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
@@ -40,17 +41,17 @@
 
   <!-- Jasa Fumigasi Beras & Gudang -->
   <url>
-    <loc>https://pancaprimawijaya.com/panca/jasa-fumigasi-beras</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/jasa-fumigasi-beras" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/jasa-fumigasi-beras" />
+    <loc>http://pancaprimawijaya.web.id/panca/jasa-fumigasi-beras</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/panca/jasa-fumigasi-beras" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/panca/jasa-fumigasi-beras" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/panca/jasa-fumigasi-beras</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/jasa-fumigasi-beras" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/jasa-fumigasi-beras" />
+    <loc>http://pancaprimawijaya.web.id/en/panca/jasa-fumigasi-beras</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/panca/jasa-fumigasi-beras" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/panca/jasa-fumigasi-beras" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -58,17 +59,17 @@
 
   <!-- Sanitasi Gudang Pangan -->
   <url>
-    <loc>https://pancaprimawijaya.com/panca/sanitasi-gudang-pangan-profesional</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/sanitasi-gudang-pangan-profesional" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/sanitasi-gudang-pangan-profesional" />
+    <loc>http://pancaprimawijaya.web.id/panca/sanitasi-gudang-pangan-profesional</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/panca/sanitasi-gudang-pangan-profesional" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/panca/sanitasi-gudang-pangan-profesional" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/panca/sanitasi-gudang-pangan-profesional</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/sanitasi-gudang-pangan-profesional" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/sanitasi-gudang-pangan-profesional" />
+    <loc>http://pancaprimawijaya.web.id/en/panca/sanitasi-gudang-pangan-profesional</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/panca/sanitasi-gudang-pangan-profesional" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/panca/sanitasi-gudang-pangan-profesional" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -76,17 +77,17 @@
 
   <!-- Jasa Fumigasi Kapal & Kontainer -->
   <url>
-    <loc>https://pancaprimawijaya.com/panca/jasa-fumigasi-kapal</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/jasa-fumigasi-kapal" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/jasa-fumigasi-kapal" />
+    <loc>http://pancaprimawijaya.web.id/panca/jasa-fumigasi-kapal</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/panca/jasa-fumigasi-kapal" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/panca/jasa-fumigasi-kapal" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/panca/jasa-fumigasi-kapal</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/jasa-fumigasi-kapal" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/jasa-fumigasi-kapal" />
+    <loc>http://pancaprimawijaya.web.id/en/panca/jasa-fumigasi-kapal</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/panca/jasa-fumigasi-kapal" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/panca/jasa-fumigasi-kapal" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -94,17 +95,17 @@
 
   <!-- Katalog / Produk Utama Panca -->
   <url>
-    <loc>https://pancaprimawijaya.com/panca/produk</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/produk" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/produk" />
+    <loc>http://pancaprimawijaya.web.id/panca/produk</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/panca/produk" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/panca/produk" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/panca/produk</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/panca/produk" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/panca/produk" />
+    <loc>http://pancaprimawijaya.web.id/en/panca/produk</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/panca/produk" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/panca/produk" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -112,17 +113,17 @@
 
   <!-- Sensor Gempa & IoT Monitoring Home -->
   <url>
-    <loc>https://pancaprimawijaya.com/sensor</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor" />
+    <loc>http://pancaprimawijaya.web.id/sensor</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/sensor</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor" />
+    <loc>http://pancaprimawijaya.web.id/en/sensor</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
@@ -130,17 +131,17 @@
 
   <!-- Building Management System -->
   <url>
-    <loc>https://pancaprimawijaya.com/sensor/building-management-system</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/building-management-system" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/building-management-system" />
+    <loc>http://pancaprimawijaya.web.id/sensor/building-management-system</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/building-management-system" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/building-management-system" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/sensor/building-management-system</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/building-management-system" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/building-management-system" />
+    <loc>http://pancaprimawijaya.web.id/en/sensor/building-management-system</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/building-management-system" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/building-management-system" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -148,17 +149,17 @@
 
   <!-- Early Warning System -->
   <url>
-    <loc>https://pancaprimawijaya.com/sensor/early-warning-system</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/early-warning-system" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/early-warning-system" />
+    <loc>http://pancaprimawijaya.web.id/sensor/early-warning-system</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/early-warning-system" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/early-warning-system" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/sensor/early-warning-system</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/early-warning-system" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/early-warning-system" />
+    <loc>http://pancaprimawijaya.web.id/en/sensor/early-warning-system</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/early-warning-system" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/early-warning-system" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -166,17 +167,17 @@
 
   <!-- Real Time Monitoring System (RTMS) -->
   <url>
-    <loc>https://pancaprimawijaya.com/sensor/real-time-monitoring-system-rtms</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/real-time-monitoring-system-rtms" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/real-time-monitoring-system-rtms" />
+    <loc>http://pancaprimawijaya.web.id/sensor/real-time-monitoring-system-rtms</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/real-time-monitoring-system-rtms" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/real-time-monitoring-system-rtms" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/sensor/real-time-monitoring-system-rtms</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/real-time-monitoring-system-rtms" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/real-time-monitoring-system-rtms" />
+    <loc>http://pancaprimawijaya.web.id/en/sensor/real-time-monitoring-system-rtms</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/real-time-monitoring-system-rtms" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/real-time-monitoring-system-rtms" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -184,17 +185,17 @@
 
   <!-- Sensor Gempa Toyo -->
   <url>
-    <loc>https://pancaprimawijaya.com/sensor/sensor-gempa</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/sensor-gempa" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/sensor-gempa" />
+    <loc>http://pancaprimawijaya.web.id/sensor/sensor-gempa</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/sensor-gempa" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/sensor-gempa" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/sensor/sensor-gempa</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/sensor-gempa" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/sensor-gempa" />
+    <loc>http://pancaprimawijaya.web.id/en/sensor/sensor-gempa</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/sensor-gempa" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/sensor-gempa" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -202,17 +203,17 @@
 
   <!-- Sparepart Lift Terlengkap -->
   <url>
-    <loc>https://pancaprimawijaya.com/sensor/sparepart-lift-terlengkap</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/sparepart-lift-terlengkap" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/sparepart-lift-terlengkap" />
+    <loc>http://pancaprimawijaya.web.id/sensor/sparepart-lift-terlengkap</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/sparepart-lift-terlengkap" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/sparepart-lift-terlengkap" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/sensor/sparepart-lift-terlengkap</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/sparepart-lift-terlengkap" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/sparepart-lift-terlengkap" />
+    <loc>http://pancaprimawijaya.web.id/en/sensor/sparepart-lift-terlengkap</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/sparepart-lift-terlengkap" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/sparepart-lift-terlengkap" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -220,17 +221,17 @@
 
   <!-- Katalog Produk Sensor -->
   <url>
-    <loc>https://pancaprimawijaya.com/sensor/produk</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/produk" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/produk" />
+    <loc>http://pancaprimawijaya.web.id/sensor/produk</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/produk" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/produk" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/sensor/produk</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/sensor/produk" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/sensor/produk" />
+    <loc>http://pancaprimawijaya.web.id/en/sensor/produk</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/sensor/produk" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/sensor/produk" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -238,17 +239,17 @@
 
   <!-- General Katalog -->
   <url>
-    <loc>https://pancaprimawijaya.com/katalog</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/katalog" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/katalog" />
+    <loc>http://pancaprimawijaya.web.id/katalog</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/katalog" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/katalog" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/katalog</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/katalog" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/katalog" />
+    <loc>http://pancaprimawijaya.web.id/en/katalog</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/katalog" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/katalog" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -256,17 +257,17 @@
 
   <!-- Blog & Artikel Edukasi -->
   <url>
-    <loc>https://pancaprimawijaya.com/blog</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/blog" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/blog" />
+    <loc>http://pancaprimawijaya.web.id/blog</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/blog" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/blog" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/blog</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/blog" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/blog" />
+    <loc>http://pancaprimawijaya.web.id/en/blog</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/blog" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/blog" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -274,17 +275,17 @@
 
   <!-- Tentang Kami -->
   <url>
-    <loc>https://pancaprimawijaya.com/tentang-kami</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/tentang-kami" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/tentang-kami" />
+    <loc>http://pancaprimawijaya.web.id/tentang-kami</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/tentang-kami" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/tentang-kami" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://pancaprimawijaya.com/en/tentang-kami</loc>
-    <xhtml:link rel="alternate" hreflang="id" href="https://pancaprimawijaya.com/tentang-kami" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://pancaprimawijaya.com/en/tentang-kami" />
+    <loc>http://pancaprimawijaya.web.id/en/tentang-kami</loc>
+    <xhtml:link rel="alternate" hreflang="id" href="http://pancaprimawijaya.web.id/tentang-kami" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://pancaprimawijaya.web.id/en/tentang-kami" />
     <lastmod>2026-06-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>

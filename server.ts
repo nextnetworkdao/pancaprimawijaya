@@ -2304,7 +2304,7 @@ Sitemap: ${baseUrl}/sitemap.xml
               "@type": "Organization",
               "name": "PT Panca Prima Wijaya",
               "alternateName": "SensorGempa",
-              "url": "https://pancaprimawijaya.com",
+              "url": "http://pancaprimawijaya.web.id",
               "logo": "https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png",
               "contactPoint": {
                 "@type": "ContactPoint",
