@@ -74,6 +74,10 @@ export interface Product {
   mpn?: string;
   brand?: string;
   condition?: string;
+  stock?: number;
+  hasvariations?: boolean;
+  variationname?: string;
+  variationoptions?: string;
 }
 
 export interface BlockStyle {
@@ -113,6 +117,7 @@ export interface Order {
   id: string;
   date: string;
   status: string;
+  resi?: string;
   total: number;
   customer: {
     name: string;

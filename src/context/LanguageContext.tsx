@@ -111,12 +111,48 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const isCurrentEn = location.pathname.startsWith('/en');
     let newPath = location.pathname;
 
+    const staticMap: Record<string, string> = {
+      'sensor/sensor-gempa': 'sensor/earthquake-sensor',
+      'sensor/sparepart-lift-terlengkap': 'sensor/elevator-escalator-spareparts',
+      'panca/jasa-fumigasi-beras': 'panca/grain-fumigation-services',
+      'panca/sanitasi-gudang-pangan-profesional': 'panca/warehouse-sanitization-services',
+      'panca/jasa-fumigasi-kapal': 'panca/ship-vessel-fumigation',
+    };
+    
+    const reverseStaticMap: Record<string, string> = {
+      'sensor/earthquake-sensor': 'sensor/sensor-gempa',
+      'sensor/elevator-escalator-spareparts': 'sensor/sparepart-lift-terlengkap',
+      'panca/grain-fumigation-services': 'panca/jasa-fumigasi-beras',
+      'panca/warehouse-sanitization-services': 'panca/sanitasi-gudang-pangan-profesional',
+      'panca/ship-vessel-fumigation': 'panca/jasa-fumigasi-kapal',
+    };
+
     if (lang === 'en' && !isCurrentEn) {
-      // Add /en prefix
-      newPath = `/en${location.pathname === '/' ? '' : location.pathname}`;
+      if (location.pathname === '/masuk') {
+        newPath = '/en/login';
+      } else if (location.pathname === '/daftar') {
+        newPath = '/en/register';
+      } else {
+        const pathNoPrefix = location.pathname.replace(/^\//, '');
+        if (staticMap[pathNoPrefix]) {
+          newPath = `/en/${staticMap[pathNoPrefix]}`;
+        } else {
+          newPath = `/en${location.pathname === '/' ? '' : location.pathname}`;
+        }
+      }
     } else if (lang === 'id' && isCurrentEn) {
-      // Remove /en prefix
-      newPath = location.pathname.replace(/^\/en/, '') || '/';
+      if (location.pathname === '/en/login') {
+        newPath = '/masuk';
+      } else if (location.pathname === '/en/register') {
+        newPath = '/daftar';
+      } else {
+        const pathNoPrefix = location.pathname.replace(/^\/en\//, '');
+        if (reverseStaticMap[pathNoPrefix]) {
+          newPath = `/${reverseStaticMap[pathNoPrefix]}`;
+        } else {
+          newPath = location.pathname.replace(/^\/en/, '') || '/';
+        }
+      }
     }
 
     navigate(newPath);
@@ -128,8 +164,37 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   // Rewrites any link dynamically to preserve the user's active language prefix
   const langLink = (path: string) => {
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    let cleanPath = path.startsWith('/') ? path : `/${path}`;
+    
+    const staticMap: Record<string, string> = {
+      '/sensor/sensor-gempa': '/sensor/earthquake-sensor',
+      '/sensor/sparepart-lift-terlengkap': '/sensor/elevator-escalator-spareparts',
+      '/panca/jasa-fumigasi-beras': '/panca/grain-fumigation-services',
+      '/panca/sanitasi-gudang-pangan-profesional': '/panca/warehouse-sanitization-services',
+      '/panca/jasa-fumigasi-kapal': '/panca/ship-vessel-fumigation',
+    };
+    
+    const reverseStaticMap: Record<string, string> = {
+      '/en/sensor/earthquake-sensor': '/sensor/sensor-gempa',
+      '/en/sensor/elevator-escalator-spareparts': '/sensor/sparepart-lift-terlengkap',
+      '/en/panca/grain-fumigation-services': '/panca/jasa-fumigasi-beras',
+      '/en/panca/warehouse-sanitization-services': '/panca/sanitasi-gudang-pangan-profesional',
+      '/en/panca/ship-vessel-fumigation': '/panca/jasa-fumigasi-kapal',
+    };
+
     if (language === 'en') {
+      if (cleanPath === '/masuk' || cleanPath === '/login') {
+        return '/en/login';
+      }
+      if (cleanPath === '/daftar' || cleanPath === '/register') {
+        return '/en/register';
+      }
+      
+      const searchKey = cleanPath.startsWith('/en') ? cleanPath.replace(/^\/en/, '') : cleanPath;
+      if (staticMap[searchKey]) {
+        cleanPath = staticMap[searchKey];
+      }
+
       if (cleanPath.startsWith('/en/')) {
         return cleanPath;
       }
@@ -138,7 +203,18 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       }
       return `/en${cleanPath === '/' ? '' : cleanPath}`;
     } else {
-      // Return normal ID path (remove en prefix safely if exists)
+      if (cleanPath === '/en/login' || cleanPath === '/login' || cleanPath === '/masuk') {
+        return '/masuk';
+      }
+      if (cleanPath === '/en/register' || cleanPath === '/register' || cleanPath === '/daftar') {
+        return '/daftar';
+      }
+
+      const searchKey = cleanPath.startsWith('/en') ? cleanPath : `/en${cleanPath}`;
+      if (reverseStaticMap[searchKey]) {
+        return reverseStaticMap[searchKey];
+      }
+      
       return cleanPath.replace(/^\/en/, '') || '/';
     }
   };

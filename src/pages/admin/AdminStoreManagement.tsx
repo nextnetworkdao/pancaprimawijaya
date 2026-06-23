@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Image as ImageIcon, Save, CheckCircle, Smartphone, Monitor } from 'lucide-react';
 import { MediaPickerModal } from '../../components/MediaPickerModal';
+import { Product } from '../../types';
 
 interface BannerConfig {
   badge?: string;
@@ -13,6 +14,7 @@ interface BannerConfig {
 
 interface FlashSaleItem {
   id: string;
+  productId?: string;
   name: string;
   price: number;
   originalPrice: number;
@@ -191,8 +193,18 @@ export default function AdminStoreManagement() {
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [mediaPickerConfig, setMediaPickerConfig] = useState<{ onSelect: (url: string) => void } | null>(null);
+  const [productsList, setProductsList] = useState<Product[]>([]);
 
   useEffect(() => {
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setProductsList(data);
+        }
+      })
+      .catch((e) => console.error("Failed to load products", e));
+
     fetch('/api/settings/store_layout')
       .then(res => res.json())
       .then(data => {
@@ -655,9 +667,51 @@ export default function AdminStoreManagement() {
                   </button>
                 </div>
 
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full">
-                  <label className="col-span-1 sm:col-span-2">
-                    <span className="text-[11px] font-bold text-gray-400 block mb-0.5">Nama Produk</span>
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 w-full">
+                  <div className="col-span-1 sm:col-span-2 md:col-span-3">
+                    <span className="text-[11px] font-bold text-gray-500 block mb-0.5">Hubungkan ke Produk Toko (Opsional)</span>
+                    <select
+                      value={item.productId || ''}
+                      onChange={(e) => {
+                        const prodId = e.target.value;
+                        const selectedProd = productsList.find(p => p.id === prodId);
+                        if (selectedProd) {
+                          const pct = parseInt(item.discount) || 25;
+                          const promoPrice = Math.round(selectedProd.price * (1 - pct / 100));
+                          setConfig(prev => ({
+                            ...prev,
+                            flashSaleItems: prev.flashSaleItems.map(fs => {
+                              if (fs.id === item.id) {
+                                return {
+                                  ...fs,
+                                  productId: prodId,
+                                  name: selectedProd.name,
+                                  originalPrice: selectedProd.price,
+                                  price: promoPrice,
+                                  image: selectedProd.image,
+                                  discount: pct.toString()
+                                };
+                              }
+                              return fs;
+                            })
+                          }));
+                        } else {
+                          handleUpdateFlashSaleItem(item.id, 'productId', undefined);
+                        }
+                      }}
+                      className="w-full px-2 py-1.5 border text-sm rounded bg-white hover:border-[#2271b1] focus:border-[#2271b1] outline-none"
+                    >
+                      <option value="">-- Input Custom / Bebas --</option>
+                      {productsList.map(p => (
+                        <option key={p.id} value={p.id}>
+                          [{p.site.toUpperCase()}] {p.name} ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(p.price)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <label className="col-span-1">
+                    <span className="text-[11px] font-bold text-gray-400 block mb-0.5">Nama Produk Tampil</span>
                     <input 
                       type="text" 
                       value={item.name} 
@@ -667,13 +721,31 @@ export default function AdminStoreManagement() {
                   </label>
                   
                   <label>
-                    <span className="text-[11px] font-bold text-gray-400 block mb-0.5">Diskon Label</span>
+                    <span className="text-[11px] font-bold text-gray-400 block mb-0.5">Diskon (%)</span>
                     <input 
-                      type="text" 
-                      value={item.discount} 
-                      onChange={(e) => handleUpdateFlashSaleItem(item.id, 'discount', e.target.value)}
-                      className="w-full px-2 py-1 border text-sm rounded bg-white" 
-                      placeholder="Contoh: Diskon 40%"
+                      type="number" 
+                      value={parseInt(item.discount) || 0} 
+                      onChange={(e) => {
+                        const pct = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                        const calculatedPrice = Math.round(item.originalPrice * (1 - pct / 100));
+                        setConfig(prev => ({
+                          ...prev,
+                          flashSaleItems: prev.flashSaleItems.map(fs => {
+                            if (fs.id === item.id) {
+                              return {
+                                ...fs,
+                                discount: pct.toString(),
+                                price: calculatedPrice
+                              };
+                            }
+                            return fs;
+                          })
+                        }));
+                      }}
+                      className="w-full px-2 py-1 border text-sm rounded bg-white font-medium text-blue-600 font-mono" 
+                      placeholder="Contoh: 25"
+                      min="0"
+                      max="100"
                     />
                   </label>
 
@@ -683,7 +755,7 @@ export default function AdminStoreManagement() {
                       type="number" 
                       value={item.price} 
                       onChange={(e) => handleUpdateFlashSaleItem(item.id, 'price', parseInt(e.target.value) || 0)}
-                      className="w-full px-2 py-1 border text-sm rounded bg-white" 
+                      className="w-full px-2 py-1 border text-sm rounded bg-white font-semibold text-rose-600" 
                     />
                   </label>
 
@@ -692,8 +764,25 @@ export default function AdminStoreManagement() {
                     <input 
                       type="number" 
                       value={item.originalPrice} 
-                      onChange={(e) => handleUpdateFlashSaleItem(item.id, 'originalPrice', parseInt(e.target.value) || 0)}
-                      className="w-full px-2 py-1 border text-sm rounded bg-white" 
+                      onChange={(e) => {
+                        const origVal = parseInt(e.target.value) || 0;
+                        const pct = parseInt(item.discount) || 0;
+                        const calculatedPrice = Math.round(origVal * (1 - pct / 100));
+                        setConfig(prev => ({
+                          ...prev,
+                          flashSaleItems: prev.flashSaleItems.map(fs => {
+                            if (fs.id === item.id) {
+                              return {
+                                ...fs,
+                                originalPrice: origVal,
+                                price: calculatedPrice
+                              };
+                            }
+                            return fs;
+                          })
+                        }));
+                      }}
+                      className="w-full px-2 py-1 border text-sm rounded bg-white text-gray-500" 
                     />
                   </label>
 
@@ -704,12 +793,12 @@ export default function AdminStoreManagement() {
                       value={item.progressText} 
                       onChange={(e) => handleUpdateFlashSaleItem(item.id, 'progressText', e.target.value)}
                       className="w-full px-2 py-1 border text-sm rounded bg-white" 
-                      placeholder="Contoh: 75% Terjual, Hampir Habis!"
+                      placeholder="Contoh: 75% Terjual"
                     />
                   </label>
 
                   <label>
-                    <span className="text-[11px] font-bold text-gray-400 block mb-0.5">Presentasi Terjual (%)</span>
+                    <span className="text-[11px] font-bold text-gray-400 block mb-0.5">Persentase Terjual (%)</span>
                     <input 
                       type="number" 
                       value={item.progressValue} 

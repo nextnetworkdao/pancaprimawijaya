@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { ShoppingCart, ShieldCheck, Phone, Menu, X, Globe, Home, MessageSquare, User, Building } from 'lucide-react';
+import { ShoppingCart, ShieldCheck, Phone, Menu, X, Globe, Home, MessageSquare, User, Building, ChevronDown } from 'lucide-react';
 import { useCart } from '../store';
 import { cn } from '../lib/utils';
 import { resetAutoLinkTracker } from '../utils/autoLink';
@@ -12,11 +12,37 @@ export function PublicLayout() {
   const { isEn, t, langLink, toggleLanguage } = useLanguage();
   const [site, setSite] = useState<'panca' | 'sensor'>('panca');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSensorDropdownOpen, setIsSensorDropdownOpen] = useState(false);
+  const [isPancaDropdownOpen, setIsPancaDropdownOpen] = useState(false);
+
+  const sensorServices = [
+    { name: isEn ? 'Early Warning System (EWS)' : 'Early Warning System (EWS)', path: '/sensor/early-warning-system' },
+    { name: isEn ? 'TOYO Earthquake Sensor' : 'Sensor Gempa Toyo', path: '/sensor/sensor-gempa' },
+    { name: isEn ? 'Building Management System (BMS)' : 'Building Management System (BMS)', path: '/sensor/building-management-system' },
+    { name: isEn ? 'Real Time Monitoring System (RTMS)' : 'Real Time Monitoring System (RTMS)', path: '/sensor/real-time-monitoring-system-rtms' },
+    { name: isEn ? 'Elevator & Escalator Spare Parts' : 'Spare Part Lift & Eskalator', path: '/sensor/sparepart-lift-terlengkap' },
+  ];
+
+  const pancaServices = [
+    { name: isEn ? 'Agricultural Grain Fumigation' : 'Jasa Fumigasi Beras', path: '/panca/jasa-fumigasi-beras' },
+    { name: isEn ? 'Wheat & Food Sanitizing' : 'Sanitasi Gudang Pangan', path: '/panca/sanitasi-gudang-pangan-profesional' },
+    { name: isEn ? 'Ship & Vessel Fumigation' : 'Jasa Fumigasi Kapal', path: '/panca/jasa-fumigasi-kapal' },
+  ];
   const isShopPage = 
     location.pathname.includes('/produk') || 
     location.pathname.includes('/katalog') || 
-    location.pathname.includes('/cart');
+    location.pathname.includes('/cart') ||
+    location.pathname.includes('/masuk') ||
+    location.pathname.includes('/login') ||
+    location.pathname.includes('/daftar') ||
+    location.pathname.includes('/register') ||
+    location.pathname.includes('/user');
   const isCatalogPage = location.pathname.includes('/produk') || location.pathname.includes('/katalog');
+
+  const savedUser = localStorage.getItem('customer_user');
+  const isLoggedIn = !!savedUser;
+  const userPath = isLoggedIn ? (isEn ? "/en/user" : "/user") : (isEn ? "/en/login" : "/masuk");
+  const isUserActive = location.pathname.includes('/masuk') || location.pathname.includes('/login') || location.pathname.includes('/user') || location.pathname.includes('/register') || location.pathname.includes('/daftar');
 
   useEffect(() => {
     resetAutoLinkTracker();
@@ -57,10 +83,40 @@ export function PublicLayout() {
               </div>
 
               {/* Desktop Menu */}
-              <nav className="hidden md:flex space-x-8">
+              <nav className="hidden md:flex space-x-8 items-center">
                 <Link to={langLink('/sensor')} className="text-gray-600 hover:text-blue-700 font-medium">{t('beranda')}</Link>
+                
+                {/* Layanan Dropdown */}
+                <div 
+                  className="relative group py-2"
+                  onMouseEnter={() => setIsSensorDropdownOpen(true)}
+                  onMouseLeave={() => setIsSensorDropdownOpen(false)}
+                >
+                  <button 
+                    className="flex items-center gap-1 text-gray-600 hover:text-blue-700 font-medium focus:outline-none"
+                    onClick={() => setIsSensorDropdownOpen(!isSensorDropdownOpen)}
+                  >
+                    <span>Layanan</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isSensorDropdownOpen ? 'rotate-180 text-blue-700' : ''}`} />
+                  </button>
+                  {isSensorDropdownOpen && (
+                    <div className="absolute left-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 py-3 z-50 animate-fade-in text-left">
+                      {sensorServices.map((srv) => (
+                        <Link
+                          key={srv.path}
+                          to={langLink(srv.path)}
+                          className="block px-4 py-2 hover:bg-blue-50 text-gray-700 hover:text-blue-700 font-semibold text-[13px] transition-colors"
+                          onClick={() => setIsSensorDropdownOpen(false)}
+                        >
+                          {srv.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <Link to={langLink('/sensor/produk')} className="text-gray-600 hover:text-blue-700 font-medium">{t('produkSensor')}</Link>
-                <Link to={langLink('/blog')} className="text-gray-600 hover:text-blue-700 font-medium">{t('artikelEdukasi')}</Link>
+                <Link to={langLink('/sensor/blog')} className="text-gray-600 hover:text-blue-700 font-medium">{t('artikelEdukasi')}</Link>
                 <Link to={langLink('/tentang-kami')} className="text-gray-600 hover:text-blue-700 font-medium">{t('tentangKami')}</Link>
               </nav>
 
@@ -96,11 +152,29 @@ export function PublicLayout() {
           </div>
           {/* Mobile Menu */}
           {isMobileMenuOpen && (
-            <div className="md:hidden bg-white border-b border-gray-200">
+            <div className="md:hidden bg-white border-b border-gray-200 text-left">
               <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                 <Link to={langLink('/sensor')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('beranda')}</Link>
+                
+                {/* Mobile Layanan Menu */}
+                <div className="px-3 py-2 border-b border-gray-150">
+                  <span className="block text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Layanan</span>
+                  <div className="pl-3 space-y-2 flex flex-col">
+                    {sensorServices.map((srv) => (
+                      <Link
+                        key={srv.path}
+                        to={langLink(srv.path)}
+                        className="text-[14px] font-semibold text-gray-600 hover:text-blue-600"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        {srv.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
                 <Link to={langLink('/sensor/produk')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('produkSensor')}</Link>
-                <Link to={langLink('/blog')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('artikelEdukasi')}</Link>
+                <Link to={langLink('/sensor/blog')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('artikelEdukasi')}</Link>
                 <Link to={langLink('/tentang-kami')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('tentangKami')}</Link>
               </div>
             </div>
@@ -119,7 +193,7 @@ export function PublicLayout() {
                 <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 py-2.5 flex justify-around items-center w-full max-w-7xl mx-auto shadow-[0_-4px_12px_rgba(0,0,0,0.08)] border-x">
                   <Link 
                     to={langLink('/sensor/produk')}
-                    className={`flex flex-col items-center flex-1 py-1 transition ${isCatalogPage && !location.pathname.includes('/cart') && !location.pathname.includes('/admin-login') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
+                    className={`flex flex-col items-center flex-1 py-1 transition ${isCatalogPage && !location.pathname.includes('/cart') && !location.pathname.includes('/masuk') && !location.pathname.includes('/login') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
                   >
                     <Home className="w-5 h-5 mb-1" />
                     <span className="text-[10px] font-bold">Beranda</span>
@@ -153,11 +227,11 @@ export function PublicLayout() {
                   </a>
 
                   <Link 
-                    to="/admin-login"
-                    className={`flex flex-col items-center flex-1 py-1 transition ${location.pathname.includes('/admin-login') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
+                    to={userPath}
+                    className={`flex flex-col items-center flex-1 py-1 transition ${isUserActive ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
                   >
                     <User className="w-5 h-5 mb-1" />
-                    <span className="text-[10px] font-bold">Saya</span>
+                    <span className="text-[10px] font-bold">{isEn ? 'Account' : 'Saya'}</span>
                   </Link>
                 </div>
               </div>
@@ -220,11 +294,40 @@ export function PublicLayout() {
             </div>
 
             {/* Desktop Menu */}
-            <nav className="hidden md:flex space-x-8">
+            <nav className="hidden md:flex space-x-8 items-center">
               <Link to={langLink('/panca')} className="text-gray-600 hover:text-blue-700 font-medium">{t('beranda')}</Link>
-              <Link to={langLink('/layanan')} className="text-gray-600 hover:text-blue-700 font-medium">{t('layananFumigasi')}</Link>
+              
+              {/* Layanan Dropdown */}
+              <div 
+                className="relative group py-2"
+                onMouseEnter={() => setIsPancaDropdownOpen(true)}
+                onMouseLeave={() => setIsPancaDropdownOpen(false)}
+              >
+                <button 
+                  className="flex items-center gap-1 text-gray-600 hover:text-blue-700 font-medium focus:outline-none"
+                  onClick={() => setIsPancaDropdownOpen(!isPancaDropdownOpen)}
+                >
+                  <span>Layanan</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isPancaDropdownOpen ? 'rotate-180 text-blue-700' : ''}`} />
+                </button>
+                {isPancaDropdownOpen && (
+                  <div className="absolute left-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 py-3 z-50 animate-fade-in text-left">
+                    {pancaServices.map((srv) => (
+                      <Link
+                        key={srv.path}
+                        to={langLink(srv.path)}
+                        className="block px-4 py-2 hover:bg-blue-50 text-gray-700 hover:text-blue-700 font-semibold text-[13px] transition-colors"
+                        onClick={() => setIsPancaDropdownOpen(false)}
+                      >
+                        {srv.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <Link to={langLink('/panca/produk')} className="text-gray-600 hover:text-blue-700 font-medium">{t('katalogEcommerce')}</Link>
-              <Link to={langLink('/blog')} className="text-gray-600 hover:text-blue-700 font-medium">{t('artikelEdukasi')}</Link>
+              <Link to={langLink('/panca/blog')} className="text-gray-600 hover:text-blue-700 font-medium">{t('artikelEdukasi')}</Link>
               <Link to={langLink('/tentang-kami')} className="text-gray-600 hover:text-blue-700 font-medium">{t('tentangKami')}</Link>
             </nav>
 
@@ -260,12 +363,29 @@ export function PublicLayout() {
         </div>
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-white border-b border-gray-200">
+          <div className="md:hidden bg-white border-b border-gray-200 text-left">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
               <Link to={langLink('/panca')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('beranda')}</Link>
-              <Link to={langLink('/layanan')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('layananFumigasi')}</Link>
+              
+              {/* Mobile Layanan Menu */}
+              <div className="px-3 py-2 border-b border-gray-150">
+                <span className="block text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Layanan</span>
+                <div className="pl-3 space-y-2 flex flex-col">
+                  {pancaServices.map((srv) => (
+                    <Link
+                      key={srv.path}
+                      to={langLink(srv.path)}
+                      className="text-[14px] font-semibold text-gray-600 hover:text-blue-600"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {srv.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
               <Link to={langLink('/panca/produk')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('katalogEcommerce')}</Link>
-              <Link to={langLink('/blog')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('artikelEdukasi')}</Link>
+              <Link to={langLink('/panca/blog')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('artikelEdukasi')}</Link>
               <Link to={langLink('/tentang-kami')} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">{t('tentangKami')}</Link>
             </div>
           </div>
@@ -285,7 +405,7 @@ export function PublicLayout() {
               <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 py-2.5 flex justify-around items-center w-full max-w-7xl mx-auto shadow-[0_-4px_12px_rgba(0,0,0,0.08)] border-x">
                 <Link 
                   to={langLink('/panca/produk')}
-                  className={`flex flex-col items-center flex-1 py-1 transition ${isCatalogPage && !location.pathname.includes('/cart') && !location.pathname.includes('/admin-login') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
+                  className={`flex flex-col items-center flex-1 py-1 transition ${isCatalogPage && !location.pathname.includes('/cart') && !location.pathname.includes('/masuk') && !location.pathname.includes('/login') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
                 >
                   <Home className="w-5 h-5 mb-1" />
                   <span className="text-[10px] font-bold">Beranda</span>
@@ -319,11 +439,11 @@ export function PublicLayout() {
                 </a>
 
                 <Link 
-                  to="/admin-login"
-                  className={`flex flex-col items-center flex-1 py-1 transition ${location.pathname.includes('/admin-login') ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
+                  to={userPath}
+                  className={`flex flex-col items-center flex-1 py-1 transition ${isUserActive ? 'text-blue-600 font-extrabold' : 'text-gray-400 hover:text-blue-600'}`}
                 >
                   <User className="w-5 h-5 mb-1" />
-                  <span className="text-[10px] font-bold">Saya</span>
+                  <span className="text-[10px] font-bold">{isEn ? 'Account' : 'Saya'}</span>
                 </Link>
               </div>
             </div>

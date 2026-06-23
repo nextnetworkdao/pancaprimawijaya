@@ -20,6 +20,9 @@ import Blog from './pages/public/Blog';
 import PostDetail from './pages/public/PostDetail';
 import About from './pages/public/About';
 import AdminLogin from './pages/public/AdminLogin';
+import Login from './pages/public/Login';
+import Register from './pages/public/Register';
+import UserPage from './pages/public/UserPage';
 
 import ProductDetail from './pages/public/ProductDetail';
 import SimulatedDoku from './pages/public/SimulatedDoku';
@@ -38,6 +41,7 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminMedia from './pages/admin/AdminMedia';
 import AdminPages from './pages/admin/AdminPages';
 import AdminPageEdit from './pages/admin/AdminPageEdit';
+import AdminStaticPages from './pages/admin/AdminStaticPages';
 import AdminStoreManagement from './pages/admin/AdminStoreManagement';
 import PageDetail from './pages/public/PageDetail';
 import BmsSensorPage from './pages/public/BmsSensorPage';
@@ -75,8 +79,10 @@ export default function App() {
                 <Route path="sensor/produk" element={<Catalog />} />
                 <Route path="katalog" element={<Catalog />} />
                 <Route path="cart" element={<Cart />} />
-                <Route path="blog" element={<Blog />} />
-                <Route path="blog/:slug" element={<PostDetail />} />
+                <Route path="panca/blog" element={<Blog />} />
+                <Route path="panca/blog/:slug" element={<PostDetail />} />
+                <Route path="sensor/blog" element={<Blog />} />
+                <Route path="sensor/blog/:slug" element={<PostDetail />} />
                 <Route path="produk/:slug" element={<ProductDetail />} />
                 <Route path="panca/produk/:slug" element={<ProductDetail />} />
                 <Route path="sensor/produk/:slug" element={<ProductDetail />} />
@@ -90,6 +96,9 @@ export default function App() {
                 <Route path="panca/sanitasi-gudang-pangan-profesional" element={<SanitasiGudangPage />} />
                 <Route path="panca/jasa-fumigasi-kapal" element={<JasaFumigasiKapalPage />} />
                 <Route path="layanan" element={<Home />} />
+                <Route path="masuk" element={<Login />} />
+                <Route path="daftar" element={<Register />} />
+                <Route path="user" element={<UserPage />} />
 
                 {/* English Routes (/en/ Prefix) */}
                 <Route path="en/panca" element={<Home />} />
@@ -98,8 +107,10 @@ export default function App() {
                 <Route path="en/sensor/produk" element={<Catalog />} />
                 <Route path="en/katalog" element={<Catalog />} />
                 <Route path="en/cart" element={<Cart />} />
-                <Route path="en/blog" element={<Blog />} />
-                <Route path="en/blog/:slug" element={<PostDetail />} />
+                <Route path="en/panca/blog" element={<Blog />} />
+                <Route path="en/panca/blog/:slug" element={<PostDetail />} />
+                <Route path="en/sensor/blog" element={<Blog />} />
+                <Route path="en/sensor/blog/:slug" element={<PostDetail />} />
                 <Route path="en/produk/:slug" element={<ProductDetail />} />
                 <Route path="en/panca/produk/:slug" element={<ProductDetail />} />
                 <Route path="en/sensor/produk/:slug" element={<ProductDetail />} />
@@ -108,11 +119,19 @@ export default function App() {
                 <Route path="en/sensor/early-warning-system" element={<EwsSensorPage />} />
                 <Route path="en/sensor/real-time-monitoring-system-rtms" element={<RtmsSensorPage />} />
                 <Route path="en/sensor/sensor-gempa" element={<ToyoSensorPage />} />
+                <Route path="en/sensor/earthquake-sensor" element={<ToyoSensorPage />} />
                 <Route path="en/sensor/sparepart-lift-terlengkap" element={<SparepartLiftPage />} />
+                <Route path="en/sensor/elevator-escalator-spareparts" element={<SparepartLiftPage />} />
                 <Route path="en/panca/jasa-fumigasi-beras" element={<JasaFumigasiPage />} />
+                <Route path="en/panca/grain-fumigation-services" element={<JasaFumigasiPage />} />
                 <Route path="en/panca/sanitasi-gudang-pangan-profesional" element={<SanitasiGudangPage />} />
+                <Route path="en/panca/warehouse-sanitization-services" element={<SanitasiGudangPage />} />
                 <Route path="en/panca/jasa-fumigasi-kapal" element={<JasaFumigasiKapalPage />} />
+                <Route path="en/panca/ship-vessel-fumigation" element={<JasaFumigasiKapalPage />} />
                 <Route path="en/layanan" element={<Home />} />
+                <Route path="en/login" element={<Login />} />
+                <Route path="en/register" element={<Register />} />
+                <Route path="en/user" element={<UserPage />} />
 
                 {/* Dynamic Pages CMS */}
                 <Route path=":slug" element={<PageDetail />} />
@@ -122,6 +141,7 @@ export default function App() {
 
               {/* Admin Login Route */}
               <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/en/admin-login" element={<AdminLogin />} />
 
               {/* Admin Routes */}
               <Route element={<ProtectedRoute />}>
@@ -143,6 +163,7 @@ export default function App() {
                   <Route path="pages" element={<AdminPages />} />
                   <Route path="pages/new" element={<AdminPageEdit />} />
                   <Route path="pages/:id/edit" element={<AdminPageEdit />} />
+                  <Route path="static-pages" element={<AdminStaticPages />} />
 
                   {/* Products Management */}
                   <Route path="products" element={<AdminProducts />} />

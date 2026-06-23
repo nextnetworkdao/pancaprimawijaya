@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Page } from '../../types';
 import { SEO } from '../../components/SEO';
 import { TrustedBy } from '../../components/TrustedBy';
@@ -37,6 +37,22 @@ export default function PageDetail() {
       .catch(() => setErrorNotFound(true))
       .finally(() => setIsLoading(false));
   }, [slug]);
+
+  const { language } = useLanguage();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!page) return;
+    
+    // If language is English and current URL slug is the ID slug, update URL to EN slug
+    if (language === 'en' && slug === page.slug && page.slug_en && slug !== page.slug_en) {
+      navigate(`/en/${page.slug_en}`, { replace: true });
+    }
+    // If language is Indonesian and current URL slug is the EN slug, update URL to ID slug
+    else if (language === 'id' && slug === page.slug_en && page.slug && slug !== page.slug) {
+      navigate(`/${page.slug}`, { replace: true });
+    }
+  }, [language, slug, page, navigate]);
 
   const { translatedData: translatedPage, loading: translating } = useAutoTranslate(page, ['title', 'content', 'seodescription', 'seotitle']);
 

@@ -168,7 +168,7 @@ async function seedDefaultPages(pool: Pool) {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
 
   // Ensure tables exist on boot
   try {
@@ -217,6 +217,7 @@ async function startServer() {
           seodescription TEXT,
           keywords TEXT,
           site VARCHAR(100),
+          stock INT DEFAULT 0,
           createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updatedat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -234,6 +235,10 @@ async function startServer() {
       ALTER TABLE products ADD COLUMN IF NOT EXISTS mpn VARCHAR(100);
       ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(255) DEFAULT 'PT Panca Prima Wijaya';
       ALTER TABLE products ADD COLUMN IF NOT EXISTS condition VARCHAR(100) DEFAULT 'new';
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INT DEFAULT 0;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS hasvariations BOOLEAN DEFAULT FALSE;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS variationname VARCHAR(255);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS variationoptions TEXT;
 
       ALTER TABLE pages ADD COLUMN IF NOT EXISTS canonical VARCHAR(255);
       ALTER TABLE pages ADD COLUMN IF NOT EXISTS robots VARCHAR(50);
@@ -298,6 +303,43 @@ async function startServer() {
           createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updatedat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS customers (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS categories (
+          id VARCHAR(255) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          slug VARCHAR(255) UNIQUE NOT NULL,
+          description TEXT,
+          seotitle VARCHAR(255),
+          seodescription TEXT,
+          site VARCHAR(50),
+          createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updatedat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS redirects (
+          id SERIAL PRIMARY KEY,
+          old_url VARCHAR(255) UNIQUE NOT NULL,
+          new_url VARCHAR(255) NOT NULL,
+          createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS product_reviews (
+          id SERIAL PRIMARY KEY,
+          product_id VARCHAR(255) NOT NULL,
+          user_name VARCHAR(255) NOT NULL,
+          user_email VARCHAR(255),
+          rating INT CHECK (rating >= 1 AND rating <= 5),
+          comment TEXT,
+          status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+          createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone VARCHAR(255);
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS address TEXT;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS resi VARCHAR(255);
     `);
     console.log("Database tables verified/created successfully.");
     await seedDefaultPages(pool);
@@ -447,6 +489,44 @@ async function startServer() {
         seodescription_en: seoDescription || ''
       };
     }
+  }
+
+  function getSlugFallback(originalSlug: string, originalTitle: string): string {
+    const base = originalSlug || originalTitle || '';
+    let clean = base.toLowerCase();
+    
+    const dict: Record<string, string> = {
+      'jasa': 'service',
+      'fumigasi': 'fumigation',
+      'kapal': 'vessel',
+      'gudang': 'warehouse',
+      'pangan': 'food',
+      'sanitasi': 'sanitization',
+      'gempa': 'earthquake',
+      'sensor': 'sensor',
+      'dan': 'and',
+      'dengan': 'with',
+      'untuk': 'for',
+      'beras': 'rice',
+      'terlengkap': 'complete',
+      'pentingnya': 'importance-of',
+    };
+
+    Object.entries(dict).forEach(([idWord, enWord]) => {
+      clean = clean.replace(new RegExp(`\\b${idWord}\\b`, 'g'), enWord);
+    });
+
+    return clean.replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+  }
+
+  function pingSitemaps() {
+    const hostname = process.env.APP_URL || 'https://www.pancaprimawijaya.com';
+    const sitemapUrl = `${hostname}/sitemap.xml`;
+    fetch(`http://www.google.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`)
+      .then(res => {
+        if (res.ok) console.log('Successfully pinged Google Sitemap');
+      })
+      .catch(err => console.error('Error pinging sitemap:', err));
   }
 
   async function runDatabaseTranslationMigration() {
@@ -760,13 +840,36 @@ ${text}`
   app.get('/api/categories/:type', async (req, res) => {
     try {
       const type = req.params.type;
+      const site = req.query.site;
       let query = '';
-      if (type === 'posts') query = "SELECT DISTINCT category FROM posts WHERE category IS NOT NULL AND category != ''";
-      else if (type === 'products') query = "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != ''";
-      else if (type === 'pages') query = "SELECT DISTINCT category FROM pages WHERE category IS NOT NULL AND category != ''";
-      else return res.status(400).json({ error: 'Invalid type' });
+      let values: any[] = [];
       
-      const { rows } = await pool.query(query);
+      if (type === 'posts') {
+        if (site) {
+          query = "SELECT DISTINCT category FROM posts WHERE category IS NOT NULL AND category != '' AND site = $1";
+          values = [site];
+        } else {
+          query = "SELECT DISTINCT category FROM posts WHERE category IS NOT NULL AND category != ''";
+        }
+      } else if (type === 'products') {
+        if (site) {
+          query = "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' AND site = $1";
+          values = [site];
+        } else {
+          query = "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != ''";
+        }
+      } else if (type === 'pages') {
+        if (site) {
+          query = "SELECT DISTINCT category FROM pages WHERE category IS NOT NULL AND category != '' AND site = $1";
+          values = [site];
+        } else {
+          query = "SELECT DISTINCT category FROM pages WHERE category IS NOT NULL AND category != ''";
+        }
+      } else {
+        return res.status(400).json({ error: 'Invalid type' });
+      }
+      
+      const { rows } = await pool.query(query, values);
       const allCats = new Set<string>();
       rows.forEach(r => {
         if (r.category) {
@@ -778,6 +881,7 @@ ${text}`
       });
       res.json(Array.from(allCats));
     } catch(e) {
+      console.error(e);
       res.status(500).json({ error: 'Server error' });
     }
   });
@@ -841,10 +945,15 @@ ${text}`
         }
       }
 
+      if (!slug_en) {
+        slug_en = getSlugFallback(b.slug, b.title);
+      }
+
       const { rows } = await pool.query(
         'INSERT INTO posts (id, title, slug, content, seotitle, seodescription, keywords, featuredimage, site, canonical, robots, ogtitle, ogdescription, ogimage, twittercard, category, status, title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING *',
         [id, b.title, b.slug, b.content, b.seoTitle, b.seoDescription, b.keywords, b.featuredImage, b.site, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en]
       );
+      pingSitemaps();
       res.status(201).json(rows[0]);
     } catch (e) {
       console.error(e);
@@ -882,10 +991,21 @@ ${text}`
         }
       }
 
+      if (!slug_en) {
+        slug_en = getSlugFallback(b.slug, b.title);
+      }
+
+      // Record Redirect dynamically if slug changes
+      const oldPost = await pool.query('SELECT slug FROM posts WHERE id = $1', [req.params.id]);
+      if (oldPost.rows[0] && oldPost.rows[0].slug && oldPost.rows[0].slug !== b.slug) {
+        await pool.query('INSERT INTO redirects (old_url, new_url) VALUES ($1, $2) ON CONFLICT DO NOTHING', [`/${oldPost.rows[0].slug}`, `/${b.slug}`]);
+      }
+
       const { rows } = await pool.query(
         'UPDATE posts SET title = $2, slug = $3, content = $4, seotitle = $5, seodescription = $6, keywords = $7, featuredimage = $8, site = $9, canonical = $10, robots = $11, ogtitle = $12, ogdescription = $13, ogimage = $14, twittercard = $15, category = $16, status = $17, title_en = $18, slug_en = $19, content_en = $20, seotitle_en = $21, seodescription_en = $22, keywords_en = $23, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
         [req.params.id, b.title, b.slug, b.content, b.seoTitle, b.seoDescription, b.keywords, b.featuredImage, b.site, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en]
       );
+      pingSitemaps();
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
     } catch (e) {
       console.error(e);
@@ -896,6 +1016,7 @@ ${text}`
   app.delete('/api/posts/:id', async (req, res) => {
     try {
       await pool.query('DELETE FROM posts WHERE id = $1', [req.params.id]);
+      pingSitemaps();
       res.json({ success: true });
     } catch (e) {
       console.error(e);
@@ -953,6 +1074,10 @@ ${text}`
         }
       }
 
+      if (!slug_en) {
+        slug_en = getSlugFallback(b.slug, b.title);
+      }
+
       const { rows } = await pool.query(
         'INSERT INTO pages (id, title, slug, content, seotitle, seodescription, image, canonical, robots, ogtitle, ogdescription, ogimage, twittercard, category, status, title_en, slug_en, content_en, seotitle_en, seodescription_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *',
         [id, b.title, b.slug, b.content, b.seotitle, b.seodescription, b.image, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en]
@@ -992,6 +1117,16 @@ ${text}`
         }
       }
 
+      if (!slug_en) {
+        slug_en = getSlugFallback(b.slug, b.title);
+      }
+
+      // Record Redirect dynamically if slug changes
+      const oldPage = await pool.query('SELECT slug FROM pages WHERE id = $1', [req.params.id]);
+      if (oldPage.rows[0] && oldPage.rows[0].slug && oldPage.rows[0].slug !== b.slug) {
+        await pool.query('INSERT INTO redirects (old_url, new_url) VALUES ($1, $2) ON CONFLICT DO NOTHING', [`/${oldPage.rows[0].slug}`, `/${b.slug}`]);
+      }
+
       const { rows } = await pool.query(
         'UPDATE pages SET title = $2, slug = $3, content = $4, seotitle = $5, seodescription = $6, image = $7, canonical = $8, robots = $9, ogtitle = $10, ogdescription = $11, ogimage = $12, twittercard = $13, category = $14, status = $15, title_en = $16, slug_en = $17, content_en = $18, seotitle_en = $19, seodescription_en = $20, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
         [req.params.id, b.title, b.slug, b.content, b.seotitle, b.seodescription, b.image, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en]
@@ -1024,7 +1159,34 @@ ${text}`
         values = [site];
       }
       const { rows } = await pool.query(query, values);
-      res.json(rows);
+
+      // Fetch store_layout settings to check for flash sales
+      let flashSaleItems: any[] = [];
+      try {
+        const settingsRes = await pool.query('SELECT value FROM settings WHERE key = $1', ['store_layout']);
+        if (settingsRes.rows.length > 0) {
+          const storeLayoutObj = settingsRes.rows[0].value;
+          flashSaleItems = storeLayoutObj.flashSaleItems || [];
+        }
+      } catch (settingsErr) {
+        console.warn('Could not read store_layout settings:', settingsErr);
+      }
+
+      const decoratedRows = rows.map((product: any) => {
+        const fsItem = flashSaleItems.find((item: any) => item.productId === product.id);
+        if (fsItem) {
+          return {
+            ...product,
+            price: Number(fsItem.price),
+            isFlashSale: true,
+            flashSaleOriginalPrice: Number(fsItem.originalPrice || product.price),
+            flashSaleDiscount: fsItem.discount || ''
+          };
+        }
+        return product;
+      });
+
+      res.json(decoratedRows);
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB Error' });
@@ -1034,7 +1196,35 @@ ${text}`
   app.get('/api/products/:identifier', async (req, res) => {
     try {
       const { rows } = await pool.query('SELECT * FROM products WHERE slug = $1 OR slug_en = $1 OR id = $1', [req.params.identifier]);
-      rows.length > 0 ? res.json(rows[0]) : res.status(404).json({ error: 'Product Not found' });
+      
+      if (rows.length > 0) {
+        // Fetch store_layout settings to check for flash sales
+        let flashSaleItems: any[] = [];
+        try {
+          const settingsRes = await pool.query('SELECT value FROM settings WHERE key = $1', ['store_layout']);
+          if (settingsRes.rows.length > 0) {
+            const storeLayoutObj = settingsRes.rows[0].value;
+            flashSaleItems = storeLayoutObj.flashSaleItems || [];
+          }
+        } catch (settingsErr) {
+          console.warn('Could not read store_layout settings:', settingsErr);
+        }
+
+        let product = rows[0];
+        const fsItem = flashSaleItems.find((item: any) => item.productId === product.id);
+        if (fsItem) {
+          product = {
+            ...product,
+            price: Number(fsItem.price),
+            isFlashSale: true,
+            flashSaleOriginalPrice: Number(fsItem.originalPrice || product.price),
+            flashSaleDiscount: fsItem.discount || ''
+          };
+        }
+        res.json(product);
+      } else {
+        res.status(404).json({ error: 'Product Not found' });
+      }
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB Error' });
@@ -1074,9 +1264,13 @@ ${text}`
         }
       }
 
+      if (!slug_en) {
+        slug_en = getSlugFallback(b.slug, b.name);
+      }
+
       const { rows } = await pool.query(
-        'INSERT INTO products (id, name, slug, price, category, image, gallery, description, seoarticle, seotitle, seodescription, keywords, site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, gtin, mpn, brand, condition) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING *',
-        [id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, b.gtin || '', b.mpn || '', b.brand || 'PT Panca Prima Wijaya', b.condition || 'new']
+        'INSERT INTO products (id, name, slug, price, category, image, gallery, description, seoarticle, seotitle, seodescription, keywords, site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, gtin, mpn, brand, condition, stock, hasvariations, variationname, variationoptions) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28) RETURNING *',
+        [id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, b.gtin || '', b.mpn || '', b.brand || 'PT Panca Prima Wijaya', b.condition || 'new', b.stock !== undefined ? Number(b.stock) : 0, b.hasvariations || false, b.variationname || '', b.variationoptions || '']
       );
       res.status(201).json(rows[0]);
     } catch (e) {
@@ -1117,9 +1311,20 @@ ${text}`
         }
       }
 
+      if (!slug_en) {
+        slug_en = getSlugFallback(b.slug, b.name);
+      }
+
+      // Record Redirect dynamically if slug changes
+      const oldProd = await pool.query('SELECT slug FROM products WHERE id = $1', [req.params.id]);
+      if (oldProd.rows[0] && oldProd.rows[0].slug && oldProd.rows[0].slug !== b.slug) {
+        await pool.query('INSERT INTO redirects (old_url, new_url) VALUES ($1, $2) ON CONFLICT DO NOTHING', [`/panca/produk/${oldProd.rows[0].slug}`, `/panca/produk/${b.slug}`]);
+        await pool.query('INSERT INTO redirects (old_url, new_url) VALUES ($1, $2) ON CONFLICT DO NOTHING', [`/sensor/produk/${oldProd.rows[0].slug}`, `/sensor/produk/${b.slug}`]);
+      }
+
       const { rows } = await pool.query(
-        'UPDATE products SET name = $2, slug = $3, price = $4, category = $5, image = $6, gallery = $7, description = $8, seoarticle = $9, seotitle = $10, seodescription = $11, keywords = $12, site = $13, name_en = $14, slug_en = $15, description_en = $16, seoarticle_en = $17, seotitle_en = $18, seodescription_en = $19, keywords_en = $20, gtin = $21, mpn = $22, brand = $23, condition = $24, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-        [req.params.id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, b.gtin || '', b.mpn || '', b.brand || 'PT Panca Prima Wijaya', b.condition || 'new']
+        'UPDATE products SET name = $2, slug = $3, price = $4, category = $5, image = $6, gallery = $7, description = $8, seoarticle = $9, seotitle = $10, seodescription = $11, keywords = $12, site = $13, name_en = $14, slug_en = $15, description_en = $16, seoarticle_en = $17, seotitle_en = $18, seodescription_en = $19, keywords_en = $20, gtin = $21, mpn = $22, brand = $23, condition = $24, stock = $25, hasvariations = $26, variationname = $27, variationoptions = $28, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+        [req.params.id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, b.gtin || '', b.mpn || '', b.brand || 'PT Panca Prima Wijaya', b.condition || 'new', b.stock !== undefined ? Number(b.stock) : 0, b.hasvariations || false, b.variationname || '', b.variationoptions || '']
       );
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
     } catch (e) {
@@ -1138,6 +1343,168 @@ ${text}`
     }
   });
 
+  // --- PRODUCT REVIEWS APIS ---
+  app.get('/api/products/:id/reviews', async (req, res) => {
+    try {
+      const { rows } = await pool.query(
+        'SELECT * FROM product_reviews WHERE product_id = $1 AND status = $2 ORDER BY createdat DESC',
+        [req.params.id, 'approved']
+      );
+      res.json(rows);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB Error' });
+    }
+  });
+
+  app.post('/api/products/:id/reviews', async (req, res) => {
+    const { user_name, user_email, rating, comment } = req.body;
+    if (!user_name || rating === undefined) {
+      return res.status(400).json({ error: 'Data review tidak lengkap' });
+    }
+    try {
+      const { rows } = await pool.query(
+        'INSERT INTO product_reviews (product_id, user_name, user_email, rating, comment, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [req.params.id, user_name, user_email || '', Number(rating), comment || '', 'approved']
+      );
+      res.status(201).json(rows[0]);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB Error' });
+    }
+  });
+
+  app.get('/api/reviews', async (req, res) => {
+    try {
+      const { rows } = await pool.query('SELECT * FROM product_reviews ORDER BY createdat DESC');
+      res.json(rows);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB Error' });
+    }
+  });
+
+  app.delete('/api/reviews/:id', async (req, res) => {
+    try {
+      await pool.query('DELETE FROM product_reviews WHERE id = $1', [req.params.id]);
+      res.json({ success: true });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB Error' });
+    }
+  });
+
+  app.put('/api/reviews/:id/status', async (req, res) => {
+    const { status } = req.body;
+    try {
+      const { rows } = await pool.query('UPDATE product_reviews SET status = $2 WHERE id = $1 RETURNING *', [req.params.id, status]);
+      rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Review not found' });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB Error' });
+    }
+  });
+
+  // --- CUSTOMER (CLIENT) PORTAL APIS (REGISTER, LOGIN, PERSISTENT HISTORY) ---
+  app.post('/api/customers/register', async (req, res) => {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Data tidak lengkap' });
+    }
+    try {
+      const canonicalEmail = email.toLowerCase().trim();
+      const existing = await pool.query('SELECT * FROM customers WHERE email = $1', [canonicalEmail]);
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: 'Email sudah terdaftar.' });
+      }
+      const { rows } = await pool.query(
+        'INSERT INTO customers (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email, phone, address',
+        [name.trim(), canonicalEmail, password]
+      );
+      res.json({ success: true, customer: rows[0] });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Gagal melakukan registrasi' });
+    }
+  });
+
+  app.post('/api/customers/login', async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Data tidak lengkap' });
+    }
+    try {
+      const canonicalEmail = email.toLowerCase().trim();
+      const { rows } = await pool.query('SELECT id, name, email, phone, address FROM customers WHERE email = $1 AND password = $2', [canonicalEmail, password]);
+      if (rows.length === 0) {
+        return res.status(400).json({ error: 'Email atau password salah.' });
+      }
+      res.json({ success: true, customer: rows[0] });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Gagal melakukan login' });
+    }
+  });
+
+  app.post('/api/customers/update', async (req, res) => {
+    const { id, name, email, password, phone, address } = req.body;
+    if (!id || !email) {
+      return res.status(400).json({ error: 'Data tidak lengkap' });
+    }
+    try {
+      const canonicalEmail = email.toLowerCase().trim();
+      const existing = await pool.query('SELECT * FROM customers WHERE email = $1 AND id != $2', [canonicalEmail, id]);
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: 'Email sudah digunakan oleh akun lain.' });
+      }
+
+      let queryStr = '';
+      let params = [];
+
+      if (password && password.trim() !== '') {
+        queryStr = 'UPDATE customers SET name = $1, email = $2, password = $3, phone = $4, address = $5 WHERE id = $6 RETURNING id, name, email, phone, address';
+        params = [name.trim(), canonicalEmail, password, phone || null, address || null, id];
+      } else {
+        queryStr = 'UPDATE customers SET name = $1, email = $2, phone = $3, address = $4 WHERE id = $5 RETURNING id, name, email, phone, address';
+        params = [name.trim(), canonicalEmail, phone || null, address || null, id];
+      }
+
+      const { rows } = await pool.query(queryStr, params);
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Pengguna tidak ditemukan.' });
+      }
+      res.json({ success: true, customer: rows[0] });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Gagal memperbarui profil' });
+    }
+  });
+
+  app.get('/api/customers/orders', async (req, res) => {
+    const email = req.query.email as string;
+    if (!email) {
+      return res.status(400).json({ error: 'Email diperlukan' });
+    }
+    try {
+      const { rows } = await pool.query('SELECT * FROM orders ORDER BY createdat DESC');
+      const mapped = rows.map(r => ({
+        id: r.id,
+        date: r.createdat,
+        total: parseFloat(r.total),
+        status: r.status,
+        resi: r.resi || '',
+        customer: typeof r.customer === 'string' ? JSON.parse(r.customer) : r.customer,
+        items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items
+      }));
+      const canonicalEmail = email.toLowerCase().trim();
+      const filtered = mapped.filter(o => o.customer && o.customer.email && o.customer.email.toLowerCase().trim() === canonicalEmail);
+      res.json(filtered);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Gagal mengambil riwayat pesanan.' });
+    }
+  });
+
   // GET all orders mapped robustly
   app.get('/api/orders', async (req, res) => {
     try {
@@ -1147,6 +1514,7 @@ ${text}`
         date: r.createdat,
         total: parseFloat(r.total),
         status: r.status,
+        resi: r.resi || '',
         customer: typeof r.customer === 'string' ? JSON.parse(r.customer) : r.customer,
         items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items
       }));
@@ -1169,6 +1537,34 @@ ${text}`
         id: order.id,
         total: parseFloat(order.total),
         status: order.status,
+        resi: order.resi || '',
+        customer: typeof order.customer === 'string' ? JSON.parse(order.customer) : order.customer,
+        items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
+        date: order.createdat
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB Error' });
+    }
+  });
+
+  // PUT update order status and tracking code (resi)
+  app.put('/api/orders/:id', async (req, res) => {
+    try {
+      const { status, resi } = req.body;
+      const { rows } = await pool.query(
+        'UPDATE orders SET status = $1, resi = $2 WHERE id = $3 RETURNING *',
+        [status, resi || null, req.params.id]
+      );
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      const order = rows[0];
+      res.json({
+        id: order.id,
+        total: parseFloat(order.total),
+        status: order.status,
+        resi: order.resi || '',
         customer: typeof order.customer === 'string' ? JSON.parse(order.customer) : order.customer,
         items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
         date: order.createdat
@@ -2336,23 +2732,53 @@ Sitemap: ${baseUrl}/sitemap.xml
     // Express 4 wildcard catch-all for SPA routing with SEO Injection
     app.get('*', async (req, res) => {
       try {
+        // 1. Check for 301 Redirects First
+        try {
+          const redirectCheck = await pool.query('SELECT new_url FROM redirects WHERE old_url = $1 LIMIT 1', [req.path]);
+          if (redirectCheck.rows.length > 0) {
+            return res.redirect(301, redirectCheck.rows[0].new_url);
+          }
+        } catch(e) {
+          // Ignore error if table not ready yet
+        }
+
         let html = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
         let title = 'PT Panca Prima Wijaya | Pest Control & Sensor Monitoring';
         let description = 'Menyediakan layanan pest control, fumigasi profesional dan solusi sensor monitoring system terbaik di Indonesia.';
         let image = 'https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png';
-        let canonical = `https://${req.get('host') || 'www.pancaprimawijaya.com'}${req.path}`;
+        const hostname = req.get('host') || 'www.pancaprimawijaya.com';
+        let canonical = `https://${hostname}${req.path}`;
         let robots = 'index, follow';
         let keywords = 'pest control, fumigasi, sensor monitoring, gas monitoring, fosfin, silofit, sensor';
         let ogType = 'website';
         let status = 200;
         let schemaJson: string | null = null;
-
+        
+        let pathId = req.path;
+        let pathEn = `/en${req.path === '/' ? '' : req.path}`;
+        
         const isEn = req.path.startsWith('/en/') || req.path === '/en';
         if (isEn) {
           title = 'PT Panca Prima Wijaya | Pest Control & Sensor Monitoring';
           description = 'Providing professional pest control, fumigation, and gas sensor monitoring systems in Indonesia.';
           keywords = 'pest control, fumigation, sensor monitoring, gas monitoring, phosphine, silofit, sensor';
+          pathId = req.path.replace(/^\/en/, '') || '/';
+          pathEn = req.path;
         }
+
+        const buildBreadcrumb = (paths: {name: string, item: string}[]) => {
+          return {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": paths.map((p, idx) => ({
+              "@type": "ListItem",
+              "position": idx + 1,
+              "name": p.name,
+              "item": `https://${hostname}${p.item}`
+            }))
+          };
+        };
+        let breadcrumbSchema: any = null;
 
         // Detect route and fetch data
         if (req.path.includes('/blog/')) {
@@ -2361,20 +2787,30 @@ Sitemap: ${baseUrl}/sitemap.xml
             const { rows } = await pool.query('SELECT * FROM posts WHERE slug = $1 OR slug_en = $1', [slug]);
             if (rows.length > 0) {
               const post = rows[0];
-              if (isEn && post.title_en) {
-                title = post.seotitle_en || post.title_en;
-                description = post.seodescription_en || post.content_en?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+              if (isEn && (post.title_en || post.slug_en)) {
+                title = post.seotitle_en || post.title_en || title;
+                description = post.seodescription_en || post.content_en?.replace(/<[^>]*>?/gm, '').substring(0, 160) || description;
                 keywords = post.keywords_en || post.keywords || keywords;
+                pathEn = `/en/${post.site || 'panca'}/blog/${post.slug_en || post.slug}`;
+                pathId = `/${post.site || 'panca'}/blog/${post.slug}`;
               } else {
                 title = post.seotitle || post.title;
-                description = post.seodescription || post.content?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+                description = post.seodescription || post.content?.replace(/<[^>]*>?/gm, '').substring(0, 160) || description;
                 keywords = post.keywords || keywords;
+                pathEn = `/en/${post.site || 'panca'}/blog/${post.slug_en || post.slug}`;
+                pathId = `/${post.site || 'panca'}/blog/${post.slug}`;
               }
               image = post.ogimage || post.featuredimage || image;
-              canonical = post.canonical || canonical;
+              canonical = isEn ? `https://${hostname}${pathEn}` : `https://${hostname}${pathId}`;
               robots = post.robots || robots;
               ogType = 'article';
               
+              breadcrumbSchema = buildBreadcrumb([
+                { name: 'Home', item: isEn ? '/en' : '/' },
+                { name: 'Blog', item: isEn ? `/en/${post.site || 'panca'}/blog` : `/${post.site || 'panca'}/blog` },
+                { name: isEn ? (post.title_en || post.title) : post.title, item: canonical }
+              ]);
+
               // Article Schema
               schemaJson = JSON.stringify({
                 "@context": "https://schema.org",
@@ -2405,36 +2841,75 @@ Sitemap: ${baseUrl}/sitemap.xml
             const { rows } = await pool.query('SELECT * FROM products WHERE slug = $1 OR slug_en = $1', [slug]);
             if (rows.length > 0) {
               const prod = rows[0];
-              if (isEn && prod.name_en) {
-                title = prod.seotitle_en || prod.name_en;
-                description = prod.seodescription_en || prod.description_en?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+              if (isEn && (prod.name_en || prod.slug_en)) {
+                title = prod.seotitle_en || prod.name_en || title;
+                description = prod.seodescription_en || prod.description_en?.replace(/<[^>]*>?/gm, '').substring(0, 160) || description;
                 keywords = prod.keywords_en || prod.keywords || keywords;
+                pathEn = `/en/${prod.site || 'panca'}/produk/${prod.slug_en || prod.slug}`;
+                pathId = `/${prod.site || 'panca'}/produk/${prod.slug}`;
               } else {
                 title = prod.seotitle || prod.name;
-                description = prod.seodescription || prod.description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+                description = prod.seodescription || prod.description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || description;
                 keywords = prod.keywords || keywords;
+                pathEn = `/en/${prod.site || 'panca'}/produk/${prod.slug_en || prod.slug}`;
+                pathId = `/${prod.site || 'panca'}/produk/${prod.slug}`;
               }
               image = prod.image || image;
+              canonical = isEn ? `https://${hostname}${pathEn}` : `https://${hostname}${pathId}`;
               ogType = 'product';
               
-              // Product Schema
-              schemaJson = JSON.stringify({
+              breadcrumbSchema = buildBreadcrumb([
+                { name: 'Home', item: isEn ? '/en' : '/' },
+                { name: 'Produk', item: isEn ? `/en/${prod.site || 'panca'}/produk` : `/${prod.site || 'panca'}/produk` },
+                { name: isEn ? (prod.name_en || prod.name) : prod.name, item: canonical }
+              ]);
+
+              // Query AggregateRating
+              let aggRating = undefined;
+              let reviewCount = 0;
+              try {
+                 const { rows: ratingRows } = await pool.query('SELECT AVG(rating) as avg, COUNT(*) as cnt FROM product_reviews WHERE product_id = $1 AND status = $2', [prod.id, 'approved']);
+                 if(ratingRows[0] && ratingRows[0].cnt > 0) {
+                   aggRating = parseFloat(ratingRows[0].avg).toFixed(1);
+                   reviewCount = parseInt(ratingRows[0].cnt);
+                 }
+              } catch(e) {}
+
+              // Product Schema Enhanced
+              const prodSchema: any = {
                 "@context": "https://schema.org",
                 "@type": "Product",
                 "name": isEn && prod.name_en ? prod.name_en : prod.name,
                 "image": [image],
                 "description": description.substring(0, 150),
+                "sku": prod.id,
+                "mpn": prod.mpn || prod.id,
+                "gtin": prod.gtin || undefined,
+                "brand": {
+                  "@type": "Brand",
+                  "name": prod.brand || "PT Panca Prima Wijaya"
+                },
                 "offers": {
                   "@type": "Offer",
+                  "url": canonical,
                   "price": prod.price || "0",
                   "priceCurrency": "IDR",
-                  "availability": "https://schema.org/InStock",
+                  "itemCondition": prod.condition === 'used' ? "https://schema.org/UsedCondition" : "https://schema.org/NewCondition",
+                  "availability": prod.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
                   "seller": {
                     "@type": "Organization",
                     "name": "PT Panca Prima Wijaya"
                   }
                 }
-              });
+              };
+              if (aggRating) {
+                prodSchema.aggregateRating = {
+                  "@type": "AggregateRating",
+                  "ratingValue": aggRating,
+                  "reviewCount": reviewCount
+                };
+              }
+              schemaJson = JSON.stringify(prodSchema);
             } else {
               status = 404;
               title = isEn ? 'Product Not Found - PT Panca Prima Wijaya' : 'Produk Tidak Ditemukan - PT Panca Prima Wijaya';
@@ -2443,27 +2918,37 @@ Sitemap: ${baseUrl}/sitemap.xml
           }
         } else {
           // Try page
-          let slug = req.path.split('/').filter(Boolean).pop() || '';
+          let slugSegments = req.path.split('/').filter(Boolean);
+          let slug = slugSegments.pop() || '';
           const knownStaticRoutes = [
-            '', 'en', 'panca', 'sensor', 'layanan', 'blog', 'tentang-kami', 'sensor/produk', 'panca/produk', 'admin-login', 'admin', 'orders', 'cart', 'bms'
+            '', 'en', 'panca', 'sensor', 'layanan', 'blog', 'tentang-kami', 'katalog', 'admin-login', 'admin', 'orders', 'cart', 'bms', 'login', 'masuk', 'daftar', 'register', 'user'
           ];
           const normalizedPath = req.path.replace(/^\/|\/$/g, '');
           
-          if (slug && !knownStaticRoutes.includes(normalizedPath)) {
+          if (slug && !knownStaticRoutes.includes(normalizedPath) && !knownStaticRoutes.includes(slug)) {
             const { rows } = await pool.query('SELECT * FROM pages WHERE slug = $1 OR slug_en = $1', [slug]);
             if (rows.length > 0) {
               const page = rows[0];
-              if (isEn && page.title_en) {
-                title = page.seotitle_en || page.title_en;
-                description = page.seodescription_en || page.content_en?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+              if (isEn && (page.title_en || page.slug_en)) {
+                title = page.seotitle_en || page.title_en || title;
+                description = page.seodescription_en || page.content_en?.replace(/<[^>]*>?/gm, '').substring(0, 160) || description;
+                pathEn = `/en/${page.slug_en || page.slug}`;
+                pathId = `/${page.slug}`;
               } else {
                 title = page.seotitle || page.title;
-                description = page.seodescription || page.content?.replace(/<[^>]*>?/gm, '').substring(0, 160) || '';
+                description = page.seodescription || page.content?.replace(/<[^>]*>?/gm, '').substring(0, 160) || description;
+                pathEn = `/en/${page.slug_en || page.slug}`;
+                pathId = `/${page.slug}`;
               }
               image = page.ogimage || page.image || image;
-              canonical = page.canonical || canonical;
+              canonical = isEn ? `https://${hostname}${pathEn}` : `https://${hostname}${pathId}`;
               robots = page.robots || robots;
               
+              breadcrumbSchema = buildBreadcrumb([
+                { name: 'Home', item: isEn ? '/en' : '/' },
+                { name: isEn ? (page.title_en || page.title) : page.title, item: canonical }
+              ]);
+
               // WebPage Schema
               schemaJson = JSON.stringify({
                 "@context": "https://schema.org",
@@ -2472,19 +2957,15 @@ Sitemap: ${baseUrl}/sitemap.xml
                 "description": description.substring(0, 150),
                 "url": canonical
               });
-            } else {
-              status = 404;
-              title = isEn ? 'Page Not Found - PT Panca Prima Wijaya' : 'Halaman Tidak Ditemukan - PT Panca Prima Wijaya';
-              description = isEn ? 'Sorry, the requested page could not be found.' : 'Maaf, halaman yang Anda cari tidak dapat ditemukan di server kami.';
             }
           } else {
-            // Default Organization Schema
+            // Default Organization Schema for static routes
             schemaJson = JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
               "name": "PT Panca Prima Wijaya",
               "alternateName": "SensorGempa",
-              "url": "http://pancaprimawijaya.web.id",
+              "url": `https://${hostname}`,
               "logo": "https://ik.imagekit.io/cej2dcwlx/PT%20Panca%20Prima%20Wijaya%20Logo.png",
               "contactPoint": {
                 "@type": "ContactPoint",
@@ -2503,6 +2984,9 @@ Sitemap: ${baseUrl}/sitemap.xml
           <meta name="description" content="${description}" />
           <meta name="keywords" content="${keywords}" />
           <link rel="canonical" href="${canonical}" />
+          <link rel="alternate" hreflang="id" href="https://${hostname}${pathId}" />
+          <link rel="alternate" hreflang="en" href="https://${hostname}${pathEn}" />
+          <link rel="alternate" hreflang="x-default" href="https://${hostname}${pathId}" />
           <meta name="robots" content="${robots}" />
           <meta property="og:title" content="${title}" />
           <meta property="og:description" content="${description}" />
@@ -2515,12 +2999,25 @@ Sitemap: ${baseUrl}/sitemap.xml
           <meta name="twitter:image" content="${image}" />
         `;
         if (schemaJson) {
-          metaTags += `
-          <script type="application/ld+json">
-            ${schemaJson}
-          </script>
-          `;
+           let combined = `[${schemaJson}`;
+           if (breadcrumbSchema) {
+             combined += `,${JSON.stringify(breadcrumbSchema)}`;
+           }
+           combined += `]`;
+           
+           metaTags += `
+           <script type="application/ld+json">
+             ${combined}
+           </script>
+           `;
+        } else if (breadcrumbSchema) {
+           metaTags += `
+           <script type="application/ld+json">
+             ${JSON.stringify(breadcrumbSchema)}
+           </script>
+           `;
         }
+        
         html = html.replace('</head>', `${metaTags}</head>`);
         
         res.status(status).send(html);
@@ -2531,9 +3028,15 @@ Sitemap: ${baseUrl}/sitemap.xml
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+  if (typeof PORT === 'string' && (PORT.includes('/') || PORT.includes('\\'))) {
+    app.listen(PORT, () => {
+      console.log(`Server running on Passenger UNIX socket: ${PORT}`);
+    });
+  } else {
+    app.listen(Number(PORT), '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  }
 }
 
 startServer();

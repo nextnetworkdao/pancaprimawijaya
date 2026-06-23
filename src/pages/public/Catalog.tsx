@@ -193,6 +193,31 @@ export default function Catalog() {
   const isSensorPath = location.pathname.includes('/sensor');
   const isPancaPath = location.pathname.includes('/panca') || location.pathname === '/';
 
+  // Derive product categories dynamically from active products in the current site prefix
+  const productCategories = React.useMemo(() => {
+    const cats = new Set<string>();
+    products.forEach(p => {
+      if (p.category) {
+        p.category.split(',').forEach(c => {
+          const trimmed = c.trim();
+          if (trimmed) cats.add(trimmed);
+        });
+      }
+    });
+    return Array.from(cats);
+  }, [products]);
+
+  const finalCategories = React.useMemo(() => {
+    if (productCategories.length > 0) {
+      return productCategories.map((c, i) => ({
+        id: `dyn-cat-${i}`,
+        label: c,
+        iconName: c
+      }));
+    }
+    return storeConfig.categories;
+  }, [productCategories, storeConfig.categories]);
+
   // Load custom storefront config
   useEffect(() => {
     fetch('/api/settings/store_layout')
@@ -256,6 +281,19 @@ export default function Catalog() {
     return matchesSearch;
   });
 
+  const getCategoryIcon = (label: string) => {
+    const lower = label.toLowerCase();
+    if (lower.includes('fumigasi') || lower.includes('pest') || lower.includes('serangga')) return Flame;
+    if (lower.includes('sanitasi') || lower.includes('bersih') || lower.includes('higienis') || lower.includes('clean')) return Sparkles;
+    if (lower.includes('sensor') || lower.includes('gempa') || lower.includes('seismic') || lower.includes('seismometer') || lower.includes('alat') || lower.includes('pemantau')) return Activity;
+    if (lower.includes('elektronik') || lower.includes('tech') || lower.includes('cpu')) return Cpu;
+    if (lower.includes('pakaian') || lower.includes('fashion') || lower.includes('shirt')) return Shirt;
+    if (lower.includes('rumah') || lower.includes('home')) return Home;
+    if (lower.includes('kuliner') || lower.includes('makanan') || lower.includes('food') || lower.includes('minum')) return Utensils;
+    if (lower.includes('buku') || lower.includes('book') || lower.includes('baca')) return BookOpen;
+    return ShoppingBag;
+  };
+
   const getIconComponent = (iconName: string) => {
     switch (iconName) {
       case 'Cpu': return Cpu;
@@ -266,7 +304,7 @@ export default function Catalog() {
       case 'Sparkles': return Sparkles;
       case 'Utensils': return Utensils;
       case 'BookOpen': return BookOpen;
-      default: return ShoppingBag;
+      default: return getCategoryIcon(iconName);
     }
   };
 
@@ -316,47 +354,6 @@ export default function Catalog() {
           </div>
         </div>
       )}
-
-      {/* BRAND HEADER BAR */}
-      <div className="bg-white border-b border-gray-100 sticky top-20 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-8 shrink-0">
-            <Link to={isSensorPath ? '/sensor' : '/panca'} className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-blue-700 to-indigo-800 bg-clip-text text-transparent flex items-center gap-1.5 hover:opacity-85 transition-opacity">
-              <span>🏰</span> PANCA SHOP
-            </Link>
-          </div>
-
-          {/* Search bar inside the header */}
-          <div className="flex-1 max-w-lg relative block">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari barang impian Anda di Panca Shop..." 
-              className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-indigo-600 focus:bg-white rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none transition duration-150 text-slate-700 font-medium"
-            />
-          </div>
-
-          <div className="flex items-center gap-4 shrink-0">
-            <button className="p-2 text-slate-400 hover:text-slate-600 relative transition">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
-            </button>
-            <Link to="/cart" className="p-2 text-slate-400 hover:text-slate-600 relative transition">
-              <ShoppingCart className="w-5 h-5" />
-              {getTotalItemsBySite(isSensorPath ? 'sensor' : 'panca') > 0 && (
-                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold leading-none text-white bg-rose-600 rounded-full scale-95">
-                  {getTotalItemsBySite(isSensorPath ? 'sensor' : 'panca')}
-                </span>
-              )}
-            </Link>
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-indigo-700 border border-indigo-100 shrink-0 select-none">
-              U
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* MAIN CONTAINER */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6">
@@ -451,7 +448,7 @@ export default function Catalog() {
             <span>✨</span> Kategori Populer
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
-            {storeConfig.categories.map((cat, idx) => {
+            {finalCategories.map((cat, idx) => {
               const IconComp = getIconComponent(cat.iconName);
               const isSelected = selectedCategory?.toLowerCase() === cat.label.toLowerCase();
               return (
@@ -524,11 +521,11 @@ export default function Catalog() {
               >
                 {/* Discount Badge on corner */}
                 <span className="absolute top-2.5 right-2.5 bg-rose-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm z-10">
-                  {item.discount}
+                  {item.discount && (item.discount.includes('%') || item.discount.toLowerCase().includes('diskon')) ? item.discount : `Diskon ${item.discount}%`}
                 </span>
 
                 <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-2 shrink-0 overflow-hidden">
-                  <img src={item.image} alt="" className="w-full h-full object-contain group-hover:scale-105 duration-200" />
+                  <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-105 duration-200" />
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -596,7 +593,7 @@ export default function Catalog() {
                   <span className="text-[10px] opacity-75">({products.length})</span>
                 </button>
 
-                {storeConfig.categories.map((cat) => {
+                {finalCategories.map((cat) => {
                   const itemsCount = products.filter(p => (p.category || '').toLowerCase().includes(cat.label.toLowerCase())).length;
                   const isSelected = selectedCategory?.toLowerCase() === cat.label.toLowerCase();
                   return (
@@ -629,12 +626,24 @@ export default function Catalog() {
             
             {/* Products grid area */}
             <div>
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 pb-4 border-b border-gray-200/60 gap-4">
                 <div>
                   <h3 className="text-md font-extrabold text-slate-900 tracking-tight">
                     {selectedCategory ? `Kategori: ${selectedCategory}` : "Semua Produk & Rekomendasi"}
                   </h3>
-                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Menampilkan {filteredProducts.slice(0, visCount).length} dari {filteredProducts.length} hasil</p>
+                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5 font-sans">Menampilkan {filteredProducts.slice(0, visCount).length} dari {filteredProducts.length} hasil</p>
+                </div>
+
+                {/* Clean, integrated search input */}
+                <div className="relative w-full sm:max-w-xs shrink-0 self-stretch sm:self-auto">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cari produk..." 
+                    className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:bg-white rounded-xl py-2 pl-9 pr-3 text-xs focus:outline-none transition duration-150 text-slate-700 font-bold placeholder-slate-400"
+                  />
                 </div>
               </div>
 
@@ -688,9 +697,17 @@ export default function Catalog() {
                           </Link>
 
                           <div className="mt-2 text-left">
-                            <span className="text-sm font-black text-slate-900 block leading-none">
+                            <span className={`text-sm font-black block leading-none ${prod.isFlashSale ? 'text-rose-600' : 'text-slate-900'}`}>
                               {formatCurrency(prod.price)}
                             </span>
+                            {prod.isFlashSale && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="text-[9px] font-black bg-rose-600 text-white px-1 rounded uppercase tracking-tight scale-90 origin-left">SALE</span>
+                                <span className="text-[10px] text-slate-400 line-through">
+                                  {formatCurrency(prod.flashSaleOriginalPrice)}
+                                </span>
+                              </div>
+                            )}
 
                             {/* Vendor, rating, sales info to match Shopee/Tokopedia exact looks */}
                             <div className="mt-2.5 border-t border-slate-50 pt-2 text-[10px] text-slate-500 flex flex-col gap-1 font-sans">
@@ -753,7 +770,7 @@ export default function Catalog() {
                     className="bg-white border border-slate-100 rounded-2xl hover:shadow-xl hover:border-indigo-150 transition-all duration-200 flex flex-col justify-between p-3 relative group"
                   >
                     <div className="aspect-square bg-slate-50 rounded-xl overflow-hidden mb-3 p-3 flex items-center justify-center relative">
-                      <img src={item.image} alt="" className="w-full h-full object-contain group-hover:scale-103 transition" />
+                      <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-103 transition" />
                     </div>
 
                     <div className="flex-1 flex flex-col justify-between">

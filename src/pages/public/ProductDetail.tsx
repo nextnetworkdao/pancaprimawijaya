@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   ShoppingCart, 
@@ -24,6 +24,40 @@ import { useCart } from '../../store';
 import { KlienKami } from '../../components/KlienKami';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAutoTranslate } from '../../hooks/useAutoTranslate';
+
+function parseVariationOptions(optionsStr?: string, category?: string, hasVariations?: boolean, isSensor?: boolean): { label: string; price?: number }[] {
+  const result: { label: string; price?: number }[] = [];
+  if (hasVariations && optionsStr) {
+    try {
+      const parsed = JSON.parse(optionsStr);
+      if (Array.isArray(parsed)) {
+        parsed.forEach(item => {
+          if (item && typeof item === 'object' && item.label) {
+            result.push({
+              label: String(item.label).trim(),
+              price: item.price ? Number(item.price) : undefined
+            });
+          } else if (typeof item === 'string') {
+            result.push({ label: item.trim() });
+          }
+        });
+      } else {
+        const legacy = String(optionsStr).split(',').map((v: string) => v.trim()).filter(Boolean);
+        legacy.forEach(lbl => result.push({ label: lbl }));
+      }
+    } catch (e) {
+      const legacy = String(optionsStr).split(',').map((v: string) => v.trim()).filter(Boolean);
+      legacy.forEach(lbl => result.push({ label: lbl }));
+    }
+  } else {
+    // defaults
+    const defaultLabels = isSensor 
+      ? ['Modbus RTU', 'Analog 4-20mA', 'RS485 Output'] 
+      : ['1 Liter', '5 Liter', '20 Liter', 'Standard Set'];
+    defaultLabels.forEach(lbl => result.push({ label: lbl }));
+  }
+  return result;
+}
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -53,6 +87,57 @@ export default function ProductDetail() {
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews'>('description');
   const [showNotification, setShowNotification] = useState(false);
 
+  // DB Product Reviews states
+  const [dbReviews, setDbReviews] = useState<any[]>([]);
+  const [newReview, setNewReview] = useState({ name: '', email: '', rating: 5, comment: '' });
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+
+  const fetchReviews = async () => {
+    if (!product?.id) return;
+    try {
+      const resp = await fetch(`/api/products/${product.id}/reviews`);
+      if (resp.ok) {
+        const data = await resp.json();
+        setDbReviews(data);
+      }
+    } catch (e) {
+      console.error("Error fetching reviews:", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, [product]);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReview.name || !newReview.comment || !product?.id) return;
+    setSubmittingReview(true);
+    try {
+      const resp = await fetch(`/api/products/${product.id}/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_name: newReview.name,
+          user_email: newReview.email,
+          rating: newReview.rating,
+          comment: newReview.comment
+        })
+      });
+      if (resp.ok) {
+        setReviewSuccess(true);
+        setNewReview({ name: '', email: '', rating: 5, comment: '' });
+        fetchReviews();
+        setTimeout(() => setReviewSuccess(false), 5000);
+      }
+    } catch (err) {
+      console.error("Error submitting review:", err);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
   // Load product & suggested products
   useEffect(() => {
     fetch(`/api/products`)
@@ -65,10 +150,16 @@ export default function ProductDetail() {
           setActiveImage(found.image);
           
           // Set dynamic default variant based on product type
-          if (found.category?.toLowerCase().includes('sensor')) {
-            setSelectedVariant('Modbus RTU');
+          const parsedOps = parseVariationOptions(
+            found.variationoptions,
+            found.category,
+            found.hasvariations,
+            found.site === 'sensor' || (found.category || '').toLowerCase().includes('sensor')
+          );
+          if (parsedOps.length > 0) {
+            setSelectedVariant(parsedOps[0].label);
           } else {
-            setSelectedVariant('1 Liter');
+            setSelectedVariant('');
           }
 
           // Get suggested products
@@ -88,11 +179,46 @@ export default function ProductDetail() {
       .finally(() => setLoading(false));
   }, [slug, isSensorPath]);
 
+  const { language } = useLanguage();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!product) return;
+    
+    // If language is English and current URL slug is the ID slug, update URL to EN slug
+    if (language === 'en' && slug === product.slug && product.slug_en && slug !== product.slug_en) {
+      navigate(`/en/${baseSite}/produk/${product.slug_en}`, { replace: true });
+    }
+    // If language is Indonesian and current URL slug is the EN slug, update URL to ID slug
+    else if (language === 'id' && slug === product.slug_en && product.slug && slug !== product.slug) {
+      navigate(`/${baseSite}/produk/${product.slug}`, { replace: true });
+    }
+  }, [language, slug, product, baseSite, navigate]);
+
   // Handle translation
   const { translatedData: translatedProduct, loading: translating } = useAutoTranslate(
     product, 
     ['name', 'category', 'description', 'seoArticle']
   );
+
+  useEffect(() => {
+    if (translatedProduct && (window as any).dataLayer) {
+      (window as any).dataLayer.push({ ecommerce: null }); // Clear previous
+      (window as any).dataLayer.push({
+        event: 'view_item',
+        ecommerce: {
+          items: [{
+            item_id: translatedProduct.id || translatedProduct.slug,
+            item_name: translatedProduct.name,
+            affiliation: 'PT Panca Prima Wijaya',
+            item_category: translatedProduct.category,
+            price: translatedProduct.price || 0,
+            quantity: 1
+          }]
+        }
+      });
+    }
+  }, [translatedProduct]);
 
   if (loading || translating) {
     return (
@@ -133,12 +259,33 @@ export default function ProductDetail() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   };
 
-  // Generate realistic formatted values
-  const currentPrice = translatedProduct.price || 150000;
-  const originalPrice = Math.round(currentPrice * 1.15); // Show dynamic 15% discount
-  const discountPercentage = '15%';
+  const isSensor = (translatedProduct.category || '').toLowerCase().includes('sensor') || isSensorPath;
 
-  const allImages = [translatedProduct.image, ...(translatedProduct.gallery || [])].filter(Boolean);
+  const parsedVariants = parseVariationOptions(
+    translatedProduct.variationoptions, 
+    translatedProduct.category, 
+    translatedProduct.hasvariations, 
+    isSensor
+  );
+
+  const activeVariantObj = parsedVariants.find(v => v.label === selectedVariant);
+  const basePrice = translatedProduct.price || 150000;
+  const currentPrice = (activeVariantObj && activeVariantObj.price !== undefined && activeVariantObj.price > 0)
+    ? activeVariantObj.price
+    : basePrice;
+
+  // Generate realistic formatted values
+  const isFlashSale = !!(translatedProduct as any).isFlashSale;
+  const originalPrice = isFlashSale 
+    ? (Number((translatedProduct as any).flashSaleOriginalPrice) || currentPrice)
+    : Math.round(currentPrice * 1.15); // Show dynamic 15% discount
+  
+  const discountVal = (translatedProduct as any).flashSaleDiscount || '';
+  const discountPercentage = isFlashSale
+    ? (discountVal.includes('%') || discountVal.toLowerCase().includes('diskon') ? discountVal : `${discountVal}%`)
+    : '15%';
+
+  const allImages = [translatedProduct.image, ...((translatedProduct as any).gallery || [])].filter(Boolean);
 
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
   const breadcrumbs = [
@@ -173,7 +320,24 @@ export default function ProductDetail() {
 
   // Click handler to show gorgeous localized cart notification
   const handleAddToCart = () => {
-    addItem(translatedProduct);
+    addItem({ ...translatedProduct, price: currentPrice });
+    if ((window as any).dataLayer) {
+      (window as any).dataLayer.push({ ecommerce: null });
+      (window as any).dataLayer.push({
+        event: 'add_to_cart',
+        ecommerce: {
+          items: [{
+            item_id: translatedProduct.id || translatedProduct.slug,
+            item_name: translatedProduct.name,
+            affiliation: 'PT Panca Prima Wijaya',
+            item_category: translatedProduct.category,
+            price: currentPrice || 0,
+            quantity: 1,
+            item_variant: selectedVariant || undefined
+          }]
+        }
+      });
+    }
     setShowNotification(true);
     setTimeout(() => {
       setShowNotification(false);
@@ -181,7 +345,6 @@ export default function ProductDetail() {
   };
 
   // Custom mock reviews for Indonesia / English, specifically mapped to products
-  const isSensor = (translatedProduct.category || '').toLowerCase().includes('sensor') || isSensorPath;
   const mockReviews = isSensor ? [
     {
       id: 1,
@@ -256,7 +419,7 @@ export default function ProductDetail() {
   ];
 
   // Dynamic variants (Capacity or connection type)
-  const variants = isSensor ? ['Modbus RTU', 'Analog 4-20mA', 'RS485 Output'] : ['1 Liter', '5 Liter', '20 Liter', 'Standard Set'];
+  const variants = parsedVariants.map(v => v.label);
 
   return (
     <>
@@ -356,7 +519,7 @@ export default function ProductDetail() {
               
               <div>
                 <span className="text-xs uppercase tracking-widest text-[#E12029] font-black block mb-1">
-                  {isSensor ? 'TOYO AUTOMATION JAPAN' : 'FUMIGATION & QUARANTINE SPECIALIST'}
+                  PT. PANCA PRIMA WIJAYA
                 </span>
                 <h1 className="text-xl md:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight">
                   {translatedProduct.name}
@@ -386,12 +549,18 @@ export default function ProductDetail() {
               </div>
 
               {/* Advanced Interactive E-Commerce Price Tag */}
-              <div className="bg-slate-50 rounded-lg p-5 border border-slate-100">
-                <div className={`text-3xl md:text-4xl font-extrabold ${themeTextAccent} tracking-tight`}>
+              <div className={`rounded-xl p-5 border ${isFlashSale ? 'bg-rose-50/50 border-rose-200 shadow-sm' : 'bg-slate-50 border-slate-100'}`}>
+                {isFlashSale && (
+                  <div className="flex items-center gap-1.5 mb-2 text-rose-600 font-extrabold text-xs uppercase tracking-wider animate-pulse">
+                    <span className="text-sm">⚡</span>
+                    <span>FLASH SALE SEDANG BERLANGSUNG</span>
+                  </div>
+                )}
+                <div className={`text-3xl md:text-4xl font-extrabold ${isFlashSale ? 'text-rose-600' : themeTextAccent} tracking-tight`}>
                   {formatCurrency(currentPrice)}
                 </div>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="bg-rose-100 text-rose-700 text-xs font-bold px-2 py-0.5 rounded">
+                  <span className={`${isFlashSale ? 'bg-rose-600 text-white' : 'bg-rose-100 text-rose-700'} text-xs font-bold px-2 py-0.5 rounded shadow-sm`}>
                     {discountPercentage} {isEn ? 'OFF' : 'POTONGAN'}
                   </span>
                   <span className="text-sm text-slate-400 line-through">
@@ -403,7 +572,9 @@ export default function ProductDetail() {
               {/* Interactive Multi-Option Variant Switcher */}
               <div className="space-y-3">
                 <label className="text-xs md:text-sm font-bold text-slate-700 block">
-                  {isSensor ? (isEn ? 'Choose Connectivity / Signal Output:' : 'Pilih Kapasitas / Output Sinyal:') : (isEn ? 'Choose Capacity / Volume Set:' : 'Pilih Kapasitas Penyimpanan / Ukuran:')}
+                  {translatedProduct.hasvariations && translatedProduct.variationname
+                    ? `${translatedProduct.variationname}:`
+                    : (isSensor ? (isEn ? 'Choose Connectivity / Signal Output:' : 'Pilih Kapasitas / Output Sinyal:') : (isEn ? 'Choose Capacity / Volume Set:' : 'Pilih Kapasitas Penyimpanan / Ukuran:'))}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {variants.map((v) => (
@@ -461,7 +632,7 @@ export default function ProductDetail() {
                 </button>
                 <button 
                   onClick={() => {
-                    addItem(translatedProduct);
+                    addItem({ ...translatedProduct, price: currentPrice });
                     window.location.href = langLink('/cart');
                   }}
                   className={`flex-1 ${themeBg} text-white ${themeHoverBg} px-8 py-3.5 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.98] shadow-md`}
@@ -471,17 +642,7 @@ export default function ProductDetail() {
                 </button>
               </div>
 
-              {/* Small trust features row */}
-              <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 text-xs text-slate-500">
-                <div className="flex items-center gap-2">
-                  <Truck className="w-4 h-4 text-slate-400" />
-                  <span>{isEn ? 'Free Shipping across Regency' : 'Gratis Ongkir Seluruh Indonesia'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-slate-400" />
-                  <span>{isEn ? 'Official 1-Year Authorized Warranty' : 'Garansi Resmi 1 Tahun'}</span>
-                </div>
-              </div>
+              {/* Removed trust row as requested */}
 
             </div>
           </div>
@@ -638,6 +799,35 @@ export default function ProductDetail() {
 
                       {/* Buyer reviews cards list */}
                       <div className="space-y-5 pt-4">
+                        {dbReviews.map((r: any) => (
+                          <div key={r.id} className="border-b border-slate-100 pb-5 last:border-0 last:pb-0">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <span className={`w-9 h-9 rounded-full ${themeBg} text-white font-bold flex items-center justify-center text-sm shadow-sm`}>
+                                  {r.user_name ? r.user_name.substring(0, 1).toUpperCase() : 'U'}
+                                </span>
+                                <div>
+                                  <div className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                    <span>{r.user_name}</span>
+                                    <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded">Pembeli Terverifikasi</span>
+                                  </div>
+                                  <div className="flex text-amber-400 space-x-0.5 mt-0.5">
+                                    {Array.from({ length: r.rating || 5 }).map((_, idx) => (
+                                      <Star key={idx} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-[11px] text-slate-400">
+                                {new Date(r.createdat).toLocaleDateString(isEn ? 'en-US' : 'id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                            </div>
+                            <p className="text-xs md:text-sm text-slate-600 mt-3 leading-relaxed bg-[#f8fafc] p-4 rounded border border-slate-100">
+                              "{r.comment}"
+                            </p>
+                          </div>
+                        ))}
+
                         {mockReviews.map((r) => (
                           <div key={r.id} className="border-b border-slate-100 pb-5 last:border-0 last:pb-0">
                             <div className="flex items-center justify-between">
@@ -668,9 +858,80 @@ export default function ProductDetail() {
                         ))}
                       </div>
 
-                      <button className="w-full py-2.5 text-center text-xs font-bold text-slate-500 hover:text-slate-800 transition border border-dashed border-slate-200 hover:border-slate-400 rounded-md">
-                        {isEn ? 'See All Genuine Buyer Reviews' : 'Lihat Semua Ulasan Pembeli'}
-                      </button>
+                      {/* Write a review forms */}
+                      <form onSubmit={handleReviewSubmit} className="bg-slate-50 p-6 rounded-lg border border-slate-100 space-y-4 shadow-sm mt-8">
+                        <h4 className="font-extrabold text-sm text-slate-800">
+                          {isEn ? 'Write a Review' : 'Tulis Ulasan Produk'}
+                        </h4>
+                        
+                        {reviewSuccess && (
+                          <div className="p-3 bg-emerald-50 text-emerald-800 text-xs rounded border border-emerald-100 font-medium animate-pulse">
+                            {isEn ? 'Thank you! Your review has been submitted successfully.' : 'Terima kasih! Ulasan Anda telah berhasil dikirim.'}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-600 mb-1">{isEn ? 'Your Name' : 'Nama Anda'}</label>
+                            <input 
+                              type="text" 
+                              required
+                              value={newReview.name}
+                              onChange={(e) => setNewReview({ ...newReview, name: e.target.value })}
+                              className="w-full text-xs p-2.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white" 
+                              placeholder={isEn ? 'e.g. John Doe' : 'contoh: Budi Santoso'}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-600 mb-1">{isEn ? 'Your Email (Optional)' : 'Email Anda (Opsional)'}</label>
+                            <input 
+                              type="email" 
+                              value={newReview.email}
+                              onChange={(e) => setNewReview({ ...newReview, email: e.target.value })}
+                              className="w-full text-xs p-2.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white" 
+                              placeholder="e.g. john@example.com"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-600 mb-1">{isEn ? 'Rating' : 'Bintang/Rating'}</label>
+                          <div className="flex items-center gap-1.5 pt-1">
+                            {[1, 2, 3, 4, 5].map((stars) => (
+                              <button
+                                key={stars}
+                                type="button"
+                                onClick={() => setNewReview({ ...newReview, rating: stars })}
+                                className="focus:outline-none transition transform hover:scale-110"
+                              >
+                                <Star 
+                                  className={`w-6 h-6 ${stars <= newReview.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} 
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-600 mb-1">{isEn ? 'Your Comment' : 'Ulasan/Komentar'}</label>
+                          <textarea 
+                            required
+                            rows={3}
+                            value={newReview.comment}
+                            onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+                            className="w-full text-xs p-2.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white" 
+                            placeholder={isEn ? 'Write your experience of this product...' : 'Tuliskan pengalaman Anda menggunakan produk ini...'}
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={submittingReview}
+                          className={`w-full py-2.5 text-xs font-bold text-white rounded transition shadow-sm ${themeBg} ${themeHoverBg} disabled:opacity-50`}
+                        >
+                          {submittingReview ? (isEn ? 'Submitting...' : 'Mengirim...') : (isEn ? 'Submit Review' : 'Kirim Ulasan')}
+                        </button>
+                      </form>
                     </div>
                   )}
                 </div>
@@ -692,10 +953,10 @@ export default function ProductDetail() {
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-800 text-xs md:text-sm">
-                      {isEn ? 'Shipped from Hub' : 'Dikirim dari Surabaya'}
+                      {isEn ? 'Shipping Nationwide' : 'Pengiriman ke seluruh indonesia'}
                     </h4>
                     <p className="text-slate-500 text-[11px] md:text-xs mt-1 leading-relaxed">
-                      {isEn ? 'Delivery estimate within 2-4 business days.' : 'Estimasi pesanan tiba dalam waktu 2-4 hari kerja.'}
+                      {isEn ? 'Fast and reliable shipping across all of Indonesia.' : 'Layanan pengiriman andal, aman, dan cepat ke seluruh wilayah Indonesia.'}
                     </p>
                   </div>
                 </div>
@@ -726,6 +987,48 @@ export default function ProductDetail() {
                       {isEn ? 'Official certified seal of license from PT Panca Prima Wijaya.' : 'Bergaransi resmi dan memiliki lisensi lengkap dari PT Panca Prima Wijaya.'}
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* Informasi & Kebijakan List Links Card */}
+              <div className="bg-white rounded-lg border border-slate-200 p-6 space-y-4 mt-6 shadow-xs">
+                <h3 className="font-extrabold text-slate-900 text-xs md:text-sm uppercase tracking-wide border-b border-slate-100 pb-2.5 flex items-center gap-2">
+                  <span className={`w-1.5 h-3.5 ${themeBg} rounded-full`}></span>
+                  {isEn ? 'Information & Policies' : 'Informasi & Kebijakan'}
+                </h3>
+                
+                <div className="divide-y divide-slate-100">
+                  <Link 
+                    to={langLink('/kebijakan-pengembalian-dana')} 
+                    className="group flex items-center justify-between py-2.5 text-xs font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+                  >
+                    <span>{isEn ? 'Return & Refund Policy' : 'Kebijakan Pengembalian & Dana'}</span>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                  </Link>
+                  
+                  <Link 
+                    to={langLink('/kontak')} 
+                    className="group flex items-center justify-between py-2.5 text-xs font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+                  >
+                    <span>{isEn ? 'Contact Us' : 'Hubungi Kami (Kontak)'}</span>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                  </Link>
+
+                  <Link 
+                    to={langLink('/syarat-ketentuan')} 
+                    className="group flex items-center justify-between py-2.5 text-xs font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+                  >
+                    <span>{isEn ? 'Terms & Conditions' : 'Syarat & Ketentuan'}</span>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                  </Link>
+
+                  <Link 
+                    to={langLink('/kebijakan-privasi')} 
+                    className="group flex items-center justify-between py-2.5 text-xs font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+                  >
+                    <span>{isEn ? 'Privacy Policy' : 'Kebijakan Privasi'}</span>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                  </Link>
                 </div>
               </div>
 

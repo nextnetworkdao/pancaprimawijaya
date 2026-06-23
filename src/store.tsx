@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product } from './types';
 
 interface CartItem {
@@ -10,6 +10,7 @@ interface CartContextType {
   items: CartItem[];
   addItem: (product: Product) => void;
   removeItem: (productId: string) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   clearCartBySite: (site: 'panca' | 'sensor') => void;
   totalItems: number;
@@ -22,7 +23,23 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('shopping_cart_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Failed to load cart items:', e);
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('shopping_cart_items', JSON.stringify(items));
+    } catch (e) {
+      console.error('Failed to save cart items:', e);
+    }
+  }, [items]);
 
   const addItem = (product: Product) => {
     setItems(curr => {
@@ -38,6 +55,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems(curr => curr.filter(i => i.product.id !== productId));
   };
 
+  const updateQuantity = (productId: string, quantity: number) => {
+    setItems(curr => {
+      if (quantity <= 0) {
+        return curr.filter(i => i.product.id !== productId);
+      }
+      return curr.map(i => i.product.id === productId ? { ...i, quantity } : i);
+    });
+  };
+
   const clearCart = () => setItems([]);
   const clearCartBySite = (site: 'panca' | 'sensor') => setItems(curr => curr.filter(i => (i.product.site || 'panca') !== site));
 
@@ -49,7 +75,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const totalPrice = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, clearCart, clearCartBySite, totalItems, totalPrice, getItemsBySite, getTotalItemsBySite, getTotalPriceBySite }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, clearCartBySite, totalItems, totalPrice, getItemsBySite, getTotalItemsBySite, getTotalPriceBySite }}>
       {children}
     </CartContext.Provider>
   );

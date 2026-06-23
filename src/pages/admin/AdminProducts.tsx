@@ -46,6 +46,7 @@ export default function AdminProducts() {
               <th className="px-3 py-2 text-[14px] font-semibold text-[#1d2327] w-16 text-center"><span className="hidden">Gambar</span></th>
               <th className="px-3 py-2 text-[14px] font-semibold text-[#1d2327]">Nama</th>
               <th className="px-3 py-2 text-[14px] font-semibold text-[#1d2327]">Kategori</th>
+              <th className="px-3 py-2 text-[14px] font-semibold text-[#1d2327]">Stok</th>
               <th className="px-3 py-2 text-[14px] font-semibold text-[#1d2327]">Harga</th>
             </tr>
           </thead>
@@ -69,6 +70,9 @@ export default function AdminProducts() {
                 <td className="px-3 py-2 text-[13px]">
                   {product.category}
                 </td>
+                <td className="px-3 py-2 text-[13px]">
+                  {product.stock !== undefined ? product.stock : 0}
+                </td>
                 <td className="px-3 py-2 text-[13px] font-semibold">
                   {formatCurrency(product.price)}
                 </td>
@@ -76,7 +80,7 @@ export default function AdminProducts() {
             ))}
             {products.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-left text-gray-500">Tidak ada produk ditemukan.</td>
+                <td colSpan={6} className="px-4 py-8 text-left text-gray-500">Tidak ada produk ditemukan.</td>
               </tr>
             )}
           </tbody>

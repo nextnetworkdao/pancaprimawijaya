@@ -26,10 +26,6 @@ export default function AdminPostForm() {
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState('');
 
-  useEffect(() => {
-    fetch('/api/categories/posts').then(r => r.json()).then(data => setCategories(data));
-  }, []);
-
   const handleAddCategory = () => {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
       setCategories(prev => [...prev, newCategory.trim()]);
@@ -129,6 +125,11 @@ export default function AdminPostForm() {
   const [formData, setFormData] = useState<Partial<Post>>({
     title: '', slug: '', content: '', featuredImage: '', seoTitle: '', seoDescription: '', keywords: '', site: (localStorage.getItem('currentSite') as 'panca' | 'sensor') || 'panca'
   });
+
+  useEffect(() => {
+    const site = formData.site || (localStorage.getItem('currentSite') as 'panca' | 'sensor') || 'panca';
+    fetch(`/api/categories/posts?site=${site}`).then(r => r.json()).then(data => setCategories(data));
+  }, [formData.site]);
 
   useEffect(() => {
     if (isEdit) {
@@ -770,7 +771,20 @@ export default function AdminPostForm() {
                   setMediaPickerConfig({
                     isOpen: true,
                     onSelect: (url) => {
-                      setFormData({...formData, featuredImage: url});
+                      const currentKeyword = formData.keywords?.trim() || aiKeyword?.trim() || formData.title?.trim() || 'gambar andalan';
+                      const imgHtml = `<p><img src="${url}" alt="${currentKeyword}" /></p>`;
+                      
+                      setFormData(prev => {
+                        const newContent = (prev.content || '') + '\n' + imgHtml;
+                        if (editorMode === 'visual' && visualEditorRef.current) {
+                          visualEditorRef.current.innerHTML = newContent;
+                        }
+                        return {
+                          ...prev,
+                          featuredImage: url,
+                          content: newContent
+                        };
+                      });
                       setMediaPickerConfig(null);
                     }
                   });

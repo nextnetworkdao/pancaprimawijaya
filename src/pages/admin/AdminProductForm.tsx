@@ -15,8 +15,10 @@ export default function AdminProductForm() {
   } | null>(null);
 
   const [formData, setFormData] = useState<Partial<Product>>({
-    name: '', slug: '', description: '', price: 0, category: 'Fumigasi', image: '', gallery: [], seoTitle: '', seoDescription: '', keywords: '', site: (localStorage.getItem('currentSite') as 'panca' | 'sensor') || 'panca'
+    name: '', slug: '', description: '', price: 0, category: 'Fumigasi', image: '', gallery: [], seoTitle: '', seoDescription: '', keywords: '', site: (localStorage.getItem('currentSite') as 'panca' | 'sensor') || 'panca', stock: 0, hasvariations: false, variationname: '', variationoptions: ''
   });
+
+  const [optionsList, setOptionsList] = useState<{ label: string; price?: number }[]>([]);
 
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState('');
@@ -61,7 +63,30 @@ export default function AdminProductForm() {
     if (isEdit) {
       fetch(`/api/products/${id}`)
         .then(r => r.json())
-        .then(data => setFormData(data));
+        .then(data => {
+          setFormData(data);
+          if (data.variationoptions) {
+            try {
+              const parsed = JSON.parse(data.variationoptions);
+              if (Array.isArray(parsed)) {
+                setOptionsList(parsed.map(item => {
+                  if (item && typeof item === 'object' && item.label) {
+                    return { label: item.label, price: item.price ? Number(item.price) : undefined };
+                  }
+                  return { label: String(item), price: undefined };
+                }));
+              } else {
+                const legacy = String(data.variationoptions).split(',').map((v: string) => v.trim()).filter(Boolean);
+                setOptionsList(legacy.map(lbl => ({ label: lbl, price: undefined })));
+              }
+            } catch (e) {
+              const legacy = String(data.variationoptions).split(',').map((v: string) => v.trim()).filter(Boolean);
+              setOptionsList(legacy.map(lbl => ({ label: lbl, price: undefined })));
+            }
+          } else {
+            setOptionsList([]);
+          }
+        });
     }
   }, [id, isEdit]);
 
@@ -69,7 +94,7 @@ export default function AdminProductForm() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'price' ? Number(value) : value,
+      [name]: (name === 'price' || name === 'stock') ? Number(value) : value,
       ...(name === 'name' && !isEdit ? { slug: String(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') } : {})
     }));
   };
@@ -80,10 +105,15 @@ export default function AdminProductForm() {
     const method = isEdit ? 'PUT' : 'POST';
     const url = isEdit ? `/api/products/${id}` : '/api/products';
 
+    const submissionData = {
+      ...formData,
+      variationoptions: JSON.stringify(optionsList)
+    };
+
     await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(submissionData)
     });
     
     navigate('/admin/products');
@@ -229,6 +259,10 @@ export default function AdminProductForm() {
                 <input required type="number" name="price" value={formData.price || 0} onChange={handleChange} className="flex-1 w-full max-w-xs px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px]" />
               </div>
               <div className="flex flex-col md:flex-row gap-4 md:items-center">
+                <label className="text-[13px] font-semibold w-1/4">Stok Produk</label>
+                <input required type="number" name="stock" value={formData.stock !== undefined ? formData.stock : 0} onChange={handleChange} min={0} className="flex-1 w-full max-w-xs px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px]" />
+              </div>
+              <div className="flex flex-col md:flex-row gap-4 md:items-center">
                 <label className="text-[13px] font-semibold w-1/4">Merek (Brand)</label>
                 <input type="text" name="brand" value={formData.brand || ''} onChange={handleChange} placeholder="Misal: PT Panca Prima Wijaya" className="flex-1 w-full max-w-xs px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px]" />
               </div>
@@ -247,6 +281,106 @@ export default function AdminProductForm() {
                 <label className="text-[13px] font-semibold w-1/4">MPN (Part Number)</label>
                 <input type="text" name="mpn" value={formData.mpn || ''} onChange={handleChange} placeholder="Manufacturer Part Number" className="flex-1 w-full max-w-xs px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px]" />
               </div>
+
+              {/* Variasi Section */}
+              <div className="border-t border-[#f0f0f1] pt-4 mt-4 space-y-4">
+                <div className="flex flex-col md:flex-row gap-4 md:items-center">
+                  <span className="text-[13px] font-semibold w-1/4">Variasi Produk</span>
+                  <label className="flex items-center gap-2 cursor-pointer text-[13px] font-medium selection:bg-transparent">
+                    <input 
+                      type="checkbox" 
+                      name="hasvariations" 
+                      checked={!!formData.hasvariations} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, hasvariations: e.target.checked }))} 
+                      className="rounded border-[#c3c4c7] text-[#2271b1] focus:ring-[#2271b1] h-4 w-4" 
+                    />
+                    <span>Aktifkan Variasi Pilihan untuk Produk ini</span>
+                  </label>
+                </div>
+
+                {formData.hasvariations && (
+                  <div className="mt-2 pl-4 border-l-2 border-[#2271b1] space-y-4">
+                    <div className="flex flex-col md:flex-row gap-4 md:items-center">
+                      <label className="text-[13px] font-semibold w-1/4">Nama Variasi</label>
+                      <input 
+                        type="text" 
+                        name="variationname" 
+                        value={formData.variationname || ''} 
+                        onChange={handleChange} 
+                        placeholder="Contoh: Pilih Kapasitas, Output Sinyal, Ukuran" 
+                        className="flex-1 w-full max-w-xs px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px]" 
+                      />
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-4 md:items-start">
+                      <div className="w-1/4">
+                        <label className="text-[13px] font-semibold block">Pilihan Variasi & Harga</label>
+                        <span className="text-[10px] text-gray-500 block mt-0.5">Konfigurasikan pilihan serta harga khusus per pilihan</span>
+                      </div>
+                      <div className="flex-1 w-full space-y-3">
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setOptionsList(prev => [...prev, { label: '', price: undefined }])}
+                            className="flex items-center gap-1 px-2.5 py-1 bg-[#2271b1] hover:bg-[#135e96] text-white rounded text-xs font-semibold transition"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Tambah Pilihan</span>
+                          </button>
+                        </div>
+
+                        {optionsList.length === 0 ? (
+                          <div className="p-4 border border-[#c3c4c7] bg-[#f6f6f7] text-center text-[12px] text-gray-500 rounded">
+                            Belum ada pilihan variasi. Klik "Tambah Pilihan" untuk memulai.
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-w-xl">
+                            {optionsList.map((item, index) => (
+                              <div key={index} className="flex items-center gap-2 bg-white p-2 border border-[#c3c4c7] rounded">
+                                <div className="flex-1">
+                                  <input
+                                    type="text"
+                                    required
+                                    value={item.label}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setOptionsList(prev => prev.map((opt, i) => i === index ? { ...opt, label: val } : opt));
+                                    }}
+                                    placeholder="Nama pilihan (contoh: 5 Liter, RTU)"
+                                    className="w-full px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] text-[12px]"
+                                  />
+                                </div>
+                                <div className="w-[150px]">
+                                  <input
+                                    type="number"
+                                    value={item.price ?? ''}
+                                    onChange={(e) => {
+                                      const rawVal = e.target.value;
+                                      const val = rawVal === '' ? undefined : Number(rawVal);
+                                      setOptionsList(prev => prev.map((opt, i) => i === index ? { ...opt, price: val } : opt));
+                                    }}
+                                    placeholder={`Dasar: Rp ${new Intl.NumberFormat('id-ID').format(formData.price || 0)}`}
+                                    className="w-full px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] text-[12px] font-mono"
+                                    min={0}
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setOptionsList(prev => prev.filter((_, i) => i !== index))}
+                                  className="p-1 px-2 border border-[#cc1818] bg-[#fcf2f2] hover:bg-[#fcdede] text-[#cc1818] rounded text-[11px] font-semibold transition"
+                                  title="Hapus"
+                                >
+                                  Hapus
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-col md:flex-row gap-4 md:items-start">
                 <label className="text-[13px] font-semibold w-1/4 mt-1">Deskripsi & Detail</label>
                 <textarea required name="description" value={formData.description || ''} onChange={handleChange} rows={5} className="flex-1 w-full px-2 py-1 border border-[#c3c4c7] outline-none focus:border-[#2271b1] focus:shadow-[0_0_0_1px_#2271b1] text-[13px]" />
