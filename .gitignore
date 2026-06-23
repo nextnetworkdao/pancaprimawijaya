@@ -1,6 +1,7 @@
 node_modules/
 build/
-dist/
+# Build directory committed for cPanel deployment
+# dist/
 coverage/
 .DS_Store
 *.log
