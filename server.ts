@@ -959,7 +959,31 @@ ${text}`
 
       const { rows } = await pool.query(
         'INSERT INTO posts (id, title, slug, content, seotitle, seodescription, keywords, featuredimage, site, canonical, robots, ogtitle, ogdescription, ogimage, twittercard, category, status, title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING *',
-        [id, b.title, b.slug, b.content, b.seoTitle, b.seoDescription, b.keywords, b.featuredImage, b.site, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en]
+        [
+          id,
+          b.title ?? '',
+          b.slug ?? '',
+          b.content ?? '',
+          b.seoTitle ?? b.seotitle ?? null,
+          b.seoDescription ?? b.seodescription ?? null,
+          b.keywords ?? null,
+          b.featuredImage ?? b.featuredimage ?? null,
+          b.site ?? null,
+          b.canonical ?? null,
+          b.robots ?? null,
+          b.ogtitle ?? null,
+          b.ogdescription ?? null,
+          b.ogimage ?? null,
+          b.twittercard ?? null,
+          b.category ?? null,
+          b.status || 'publish',
+          title_en ?? null,
+          slug_en ?? null,
+          content_en ?? null,
+          seotitle_en ?? null,
+          seodescription_en ?? null,
+          keywords_en ?? null
+        ]
       );
       pingSitemaps();
       res.status(201).json(rows[0]);
@@ -1011,7 +1035,31 @@ ${text}`
 
       const { rows } = await pool.query(
         'UPDATE posts SET title = $2, slug = $3, content = $4, seotitle = $5, seodescription = $6, keywords = $7, featuredimage = $8, site = $9, canonical = $10, robots = $11, ogtitle = $12, ogdescription = $13, ogimage = $14, twittercard = $15, category = $16, status = $17, title_en = $18, slug_en = $19, content_en = $20, seotitle_en = $21, seodescription_en = $22, keywords_en = $23, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-        [req.params.id, b.title, b.slug, b.content, b.seoTitle, b.seoDescription, b.keywords, b.featuredImage, b.site, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en]
+        [
+          req.params.id,
+          b.title ?? '',
+          b.slug ?? '',
+          b.content ?? '',
+          b.seoTitle ?? b.seotitle ?? null,
+          b.seoDescription ?? b.seodescription ?? null,
+          b.keywords ?? null,
+          b.featuredImage ?? b.featuredimage ?? null,
+          b.site ?? null,
+          b.canonical ?? null,
+          b.robots ?? null,
+          b.ogtitle ?? null,
+          b.ogdescription ?? null,
+          b.ogimage ?? null,
+          b.twittercard ?? null,
+          b.category ?? null,
+          b.status || 'publish',
+          title_en ?? null,
+          slug_en ?? null,
+          content_en ?? null,
+          seotitle_en ?? null,
+          seodescription_en ?? null,
+          keywords_en ?? null
+        ]
       );
       pingSitemaps();
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
@@ -1088,7 +1136,28 @@ ${text}`
 
       const { rows } = await pool.query(
         'INSERT INTO pages (id, title, slug, content, seotitle, seodescription, image, canonical, robots, ogtitle, ogdescription, ogimage, twittercard, category, status, title_en, slug_en, content_en, seotitle_en, seodescription_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *',
-        [id, b.title, b.slug, b.content, b.seotitle, b.seodescription, b.image, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en]
+        [
+          id,
+          b.title ?? '',
+          b.slug ?? '',
+          b.content ?? '',
+          b.seoTitle ?? b.seotitle ?? null,
+          b.seoDescription ?? b.seodescription ?? null,
+          b.image ?? b.featuredImage ?? b.featuredimage ?? null,
+          b.canonical ?? null,
+          b.robots ?? null,
+          b.ogtitle ?? null,
+          b.ogdescription ?? null,
+          b.ogimage ?? null,
+          b.twittercard ?? null,
+          b.category ?? null,
+          b.status || 'publish',
+          title_en ?? null,
+          slug_en ?? null,
+          content_en ?? null,
+          seotitle_en ?? null,
+          seodescription_en ?? null
+        ]
       );
       res.status(201).json(rows[0]);
     } catch (e) {
@@ -1137,7 +1206,28 @@ ${text}`
 
       const { rows } = await pool.query(
         'UPDATE pages SET title = $2, slug = $3, content = $4, seotitle = $5, seodescription = $6, image = $7, canonical = $8, robots = $9, ogtitle = $10, ogdescription = $11, ogimage = $12, twittercard = $13, category = $14, status = $15, title_en = $16, slug_en = $17, content_en = $18, seotitle_en = $19, seodescription_en = $20, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-        [req.params.id, b.title, b.slug, b.content, b.seotitle, b.seodescription, b.image, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en]
+        [
+          req.params.id,
+          b.title ?? '',
+          b.slug ?? '',
+          b.content ?? '',
+          b.seoTitle ?? b.seotitle ?? null,
+          b.seoDescription ?? b.seodescription ?? null,
+          b.image ?? b.featuredImage ?? b.featuredimage ?? null,
+          b.canonical ?? null,
+          b.robots ?? null,
+          b.ogtitle ?? null,
+          b.ogdescription ?? null,
+          b.ogimage ?? null,
+          b.twittercard ?? null,
+          b.category ?? null,
+          b.status || 'publish',
+          title_en ?? null,
+          slug_en ?? null,
+          content_en ?? null,
+          seotitle_en ?? null,
+          seodescription_en ?? null
+        ]
       );
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
     } catch (e) {
@@ -1278,7 +1368,36 @@ ${text}`
 
       const { rows } = await pool.query(
         'INSERT INTO products (id, name, slug, price, category, image, gallery, description, seoarticle, seotitle, seodescription, keywords, site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, gtin, mpn, brand, condition, stock, hasvariations, variationname, variationoptions) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28) RETURNING *',
-        [id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, b.gtin || '', b.mpn || '', b.brand || 'PT Panca Prima Wijaya', b.condition || 'new', b.stock !== undefined ? Number(b.stock) : 0, b.hasvariations || false, b.variationname || '', b.variationoptions || '']
+        [
+          id,
+          b.name ?? '',
+          b.slug ?? '',
+          b.price ?? 0,
+          b.category ?? null,
+          b.image ?? null,
+          JSON.stringify(b.gallery || []),
+          b.description ?? null,
+          b.seoArticle ?? b.seoarticle ?? null,
+          b.seoTitle ?? b.seotitle ?? null,
+          b.seoDescription ?? b.seodescription ?? null,
+          b.keywords ?? null,
+          b.site ?? null,
+          name_en ?? null,
+          slug_en ?? null,
+          description_en ?? null,
+          seoarticle_en ?? null,
+          seotitle_en ?? null,
+          seodescription_en ?? null,
+          keywords_en ?? null,
+          b.gtin ?? '',
+          b.mpn ?? '',
+          b.brand ?? 'PT Panca Prima Wijaya',
+          b.condition ?? 'new',
+          b.stock !== undefined ? Number(b.stock) : 0,
+          b.hasvariations || false,
+          b.variationname ?? '',
+          b.variationoptions ?? ''
+        ]
       );
       res.status(201).json(rows[0]);
     } catch (e) {
@@ -1332,7 +1451,36 @@ ${text}`
 
       const { rows } = await pool.query(
         'UPDATE products SET name = $2, slug = $3, price = $4, category = $5, image = $6, gallery = $7, description = $8, seoarticle = $9, seotitle = $10, seodescription = $11, keywords = $12, site = $13, name_en = $14, slug_en = $15, description_en = $16, seoarticle_en = $17, seotitle_en = $18, seodescription_en = $19, keywords_en = $20, gtin = $21, mpn = $22, brand = $23, condition = $24, stock = $25, hasvariations = $26, variationname = $27, variationoptions = $28, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-        [req.params.id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, b.gtin || '', b.mpn || '', b.brand || 'PT Panca Prima Wijaya', b.condition || 'new', b.stock !== undefined ? Number(b.stock) : 0, b.hasvariations || false, b.variationname || '', b.variationoptions || '']
+        [
+          req.params.id,
+          b.name ?? '',
+          b.slug ?? '',
+          b.price ?? 0,
+          b.category ?? null,
+          b.image ?? null,
+          JSON.stringify(b.gallery || []),
+          b.description ?? null,
+          b.seoArticle ?? b.seoarticle ?? null,
+          b.seoTitle ?? b.seotitle ?? null,
+          b.seoDescription ?? b.seodescription ?? null,
+          b.keywords ?? null,
+          b.site ?? null,
+          name_en ?? null,
+          slug_en ?? null,
+          description_en ?? null,
+          seoarticle_en ?? null,
+          seotitle_en ?? null,
+          seodescription_en ?? null,
+          keywords_en ?? null,
+          b.gtin ?? '',
+          b.mpn ?? '',
+          b.brand ?? 'PT Panca Prima Wijaya',
+          b.condition ?? 'new',
+          b.stock !== undefined ? Number(b.stock) : 0,
+          b.hasvariations || false,
+          b.variationname ?? '',
+          b.variationoptions ?? ''
+        ]
       );
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
     } catch (e) {
@@ -1562,7 +1710,7 @@ ${text}`
       const { status, resi } = req.body;
       const { rows } = await pool.query(
         'UPDATE orders SET status = $1, resi = $2 WHERE id = $3 RETURNING *',
-        [status, resi || null, req.params.id]
+        [status ?? 'Pending', resi || null, req.params.id]
       );
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Order not found' });
@@ -1675,7 +1823,7 @@ ${text}`
       // Save order to Postgres DB
       const { rows } = await pool.query(
         'INSERT INTO orders (id, customer, items, total, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [id, JSON.stringify(b.customer), JSON.stringify(b.items), amount, dbStatus]
+        [id, JSON.stringify(b.customer || {}), JSON.stringify(b.items || []), amount, dbStatus]
       );
 
       console.log(`[PUSH NOTIF] New order ${id} logged with status: ${dbStatus}`);
@@ -1807,7 +1955,7 @@ ${text}`
       const { name, code, location, is_active } = req.body;
       const { rows } = await pool.query(
         'INSERT INTO scripts (name, code, location, is_active) VALUES ($1, $2, $3, $4) RETURNING *',
-        [name, code, location, is_active !== false]
+        [name ?? '', code ?? '', location ?? 'head', is_active !== false]
       );
       res.status(201).json(rows[0]);
     } catch (e) {
@@ -1821,7 +1969,7 @@ ${text}`
       const { name, code, location, is_active } = req.body;
       const { rows } = await pool.query(
         'UPDATE scripts SET name=$1, code=$2, location=$3, is_active=$4, updatedat=CURRENT_TIMESTAMP WHERE id=$5 RETURNING *',
-        [name, code, location, is_active !== false, req.params.id]
+        [name ?? '', code ?? '', location ?? 'head', is_active !== false, req.params.id]
       );
       res.json(rows[0]);
     } catch (e) {
