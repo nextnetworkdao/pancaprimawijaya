@@ -3,13 +3,12 @@ import path from 'path';
 import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import multer from 'multer';
-import sharp from 'sharp';
 import fs from 'fs';
 import { Pool } from 'pg';
 import { GoogleGenAI, Type } from "@google/genai";
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_KXPcOL8yei6r@ep-restless-waterfall-aocnkn4e-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
+  connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL || 'postgresql://neondb_owner:npg_KXPcOL8yei6r@ep-restless-waterfall-aocnkn4e-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
   ssl: { rejectUnauthorized: false }
 });
 
@@ -626,7 +625,12 @@ export async function createExpressApp() {
     }
   }
 
-  app.use(express.json());
+  app.use((req, res, next) => {
+    if (req.body !== undefined) {
+      return next();
+    }
+    express.json()(req, res, next);
+  });
 
   // AI Article Generator using Gemini API
   app.post('/api/posts/generate-ai', async (req, res) => {
@@ -2039,19 +2043,35 @@ ${text}`
 
       const fileNameWithoutExt = path.parse(req.file.originalname).name;
       const safeFileName = fileNameWithoutExt.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const newFileName = `${safeFileName}-${Date.now()}.webp`;
 
-      // Convert to WebP using sharp and output to a buffer
-      const webpBuffer = await sharp(req.file.buffer)
-        .webp({ quality: 80 })
-        .toBuffer();
+      let processedBuffer = req.file.buffer;
+      let mimeType = req.file.mimetype || 'image/jpeg';
+      let extension = 'jpg';
 
-      const base64Data = webpBuffer.toString('base64');
+      if (req.file.mimetype === 'image/png') extension = 'png';
+      else if (req.file.mimetype === 'image/webp') extension = 'webp';
+      else if (req.file.mimetype === 'image/gif') extension = 'gif';
+      else if (req.file.mimetype === 'image/svg+xml') extension = 'svg';
+
+      // Attempt optimization using sharp with fallback
+      try {
+        const sharpModule: any = await import('sharp').then(m => m.default || m);
+        processedBuffer = await sharpModule(req.file.buffer)
+          .webp({ quality: 80 })
+          .toBuffer();
+        mimeType = 'image/webp';
+        extension = 'webp';
+      } catch (sharpError: any) {
+        console.warn("Sharp optimization failed, using original file format fallback:", sharpError.message);
+      }
+
+      const newFileName = `${safeFileName}-${Date.now()}.${extension}`;
+      const base64Data = processedBuffer.toString('base64');
 
       // Save to database
       await pool.query(
         'INSERT INTO uploaded_images (filename, mime_type, data) VALUES ($1, $2, $3) ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data, mime_type = EXCLUDED.mime_type',
-        [newFileName, 'image/webp', base64Data]
+        [newFileName, mimeType, base64Data]
       );
 
       // Try writing to local disk as a secondary fallback (useful in local dev / non-serverless)
@@ -2060,19 +2080,19 @@ ${text}`
           fs.mkdirSync(uploadDir, { recursive: true });
         }
         const outputPath = path.join(uploadDir, newFileName);
-        await fs.promises.writeFile(outputPath, webpBuffer);
+        await fs.promises.writeFile(outputPath, processedBuffer);
       } catch (localWriteError: any) {
         console.warn("Local disk write failed (expected on Vercel):", localWriteError.message);
       }
 
       res.json({ 
         success: true, 
-        message: 'Image uploaded and saved to DB', 
+        message: 'Image uploaded successfully', 
         url: `/img/${newFileName}` 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing image:', error);
-      res.status(500).json({ error: 'Failed to process image' });
+      res.status(500).json({ error: 'Failed to process image', details: error.message });
     }
   });
 
