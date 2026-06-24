@@ -786,6 +786,47 @@ ${text}`
   });
 
   // API Settings & Page Builder
+  function maskConnectionString(url: string | undefined): string {
+    if (!url) return 'undefined';
+    try {
+      const parsed = new URL(url);
+      if (parsed.password) parsed.password = '***';
+      return parsed.toString();
+    } catch {
+      return url.replace(/:[^:@/]+@/, ':***@');
+    }
+  }
+
+  app.get('/api/db-status', async (req, res) => {
+    const diagnostics: any = {
+      timestamp: new Date().toISOString(),
+      env: {
+        DATABASE_URL_SET: !!process.env.DATABASE_URL,
+        DATABASE_URL_MASKED: maskConnectionString(process.env.DATABASE_URL),
+        POSTGRES_URL_SET: !!process.env.POSTGRES_URL,
+        POSTGRES_URL_MASKED: maskConnectionString(process.env.POSTGRES_URL),
+        NODE_ENV: process.env.NODE_ENV
+      }
+    };
+
+    try {
+      const timeResult = await pool.query('SELECT NOW()');
+      diagnostics.connectionOk = true;
+      diagnostics.dbTime = timeResult.rows[0]?.now;
+
+      const tablesResult = await pool.query(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+      );
+      diagnostics.tables = tablesResult.rows.map((r: any) => r.table_name);
+    } catch (err: any) {
+      diagnostics.connectionOk = false;
+      diagnostics.error = err.message;
+      diagnostics.stack = err.stack;
+    }
+
+    res.json(diagnostics);
+  });
+
   app.get('/api/settings/home', async (req, res) => {
     try {
       const { rows } = await pool.query('SELECT value FROM settings WHERE key = $1', ['home']);
@@ -991,9 +1032,9 @@ ${text}`
       );
       pingSitemaps();
       res.status(201).json(rows[0]);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      res.status(500).json({ error: 'DB Error' });
+      res.status(500).json({ error: `DB Error (POST /api/posts): ${e.message || e}` });
     }
   });
 
@@ -1067,9 +1108,9 @@ ${text}`
       );
       pingSitemaps();
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      res.status(500).json({ error: 'DB Error' });
+      res.status(500).json({ error: `DB Error (PUT /api/posts): ${e.message || e}` });
     }
   });
 

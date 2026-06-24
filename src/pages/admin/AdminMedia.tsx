@@ -42,7 +42,8 @@ export default function AdminMedia() {
       if (res.ok) {
         await fetchMedia();
       } else {
-        alert('Gagal mengupload gambar');
+        const errData = await res.json().catch(() => ({}));
+        alert('Gagal mengupload gambar: ' + (errData.details || errData.error || 'Respons tidak dikenal dari server'));
       }
     } catch (error) {
       console.error('Error uploading:', error);
