@@ -3,13 +3,13 @@ import path from 'path';
 import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import multer from 'multer';
+import sharp from 'sharp';
 import fs from 'fs';
 import { Pool } from 'pg';
 import { GoogleGenAI, Type } from "@google/genai";
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL || 'postgresql://neondb_owner:npg_KXPcOL8yei6r@ep-restless-waterfall-aocnkn4e-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
-  ssl: { rejectUnauthorized: false }
+  connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_KXPcOL8yei6r@ep-restless-waterfall-aocnkn4e-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
 });
 
 async function seedDefaultPages(pool: Pool) {
@@ -166,7 +166,7 @@ async function seedDefaultPages(pool: Pool) {
   }
 }
 
-export async function createExpressApp() {
+async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
 
@@ -341,40 +341,31 @@ export async function createExpressApp() {
       ALTER TABLE customers ADD COLUMN IF NOT EXISTS address TEXT;
       ALTER TABLE orders ADD COLUMN IF NOT EXISTS resi VARCHAR(255);
 
-      CREATE TABLE IF NOT EXISTS uploaded_images (
-          filename VARCHAR(255) PRIMARY KEY,
-          mime_type VARCHAR(100) NOT NULL,
-          data TEXT NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      CREATE TABLE IF NOT EXISTS admins (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(100) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      INSERT INTO admins (username, password)
+      VALUES 
+          ('admin', 'pancaprimasukses#123@'),
+          ('ahmad', 'suksesbersamaa')
+      ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password;
     `);
     console.log("Database tables verified/created successfully.");
     await seedDefaultPages(pool);
-    if (!process.env.VERCEL) {
-      runDatabaseTranslationMigration(); // Trigger the background auto-translation migration
-    } else {
-      console.log("Running in Vercel: Background translation migration disabled to prevent serverless function timeouts.");
-    }
+    runDatabaseTranslationMigration(); // Trigger the background auto-translation migration
   } catch (err) {
     console.error("Failed to verify tables:", err);
   }
 
   // --- AUTO-TRANSLATION SERVER-SIDE HELPERS (GEMINI 3.5 FLASH) ---
   async function translatePostAI(ai: any, title: string, content: string, seoTitle: string, seoDescription: string, keywords: string) {
-    const fallback = {
-      title_en: title,
-      slug_en: (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-      content_en: content,
-      seotitle_en: seoTitle || '',
-      seodescription_en: seoDescription || '',
-      keywords_en: keywords || ''
-    };
-
-    const callPromise = (async () => {
-      try {
-        const res = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
-          contents: `You are an expert bilingual content editor and professional SEO analyst.
+    try {
+      const res = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: `You are an expert bilingual content editor and professional SEO analyst.
   Translate the following Indonesian blog post content and SEO parameters into natural, high-converting English.
   CRITICAL MANDATES:
   1. Preserve all HTML structure, inline styles, tags (e.g. figure, img, figcaption, a, inline target attributes, table, thead, tbody, etc.) EXACTLY inside the translated content. Do not drop or break any HTML element.
@@ -387,56 +378,43 @@ export async function createExpressApp() {
   SEO Title: "${seoTitle || ''}"
   SEO Description: "${seoDescription || ''}"
   Keywords: "${keywords || ''}"`,
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                title_en: { type: Type.STRING },
-                slug_en: { type: Type.STRING },
-                content_en: { type: Type.STRING },
-                seotitle_en: { type: Type.STRING },
-                seodescription_en: { type: Type.STRING },
-                keywords_en: { type: Type.STRING }
-              },
-              required: ['title_en', 'slug_en', 'content_en', 'seotitle_en', 'seodescription_en', 'keywords_en']
-            }
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title_en: { type: Type.STRING },
+              slug_en: { type: Type.STRING },
+              content_en: { type: Type.STRING },
+              seotitle_en: { type: Type.STRING },
+              seodescription_en: { type: Type.STRING },
+              keywords_en: { type: Type.STRING }
+            },
+            required: ['title_en', 'slug_en', 'content_en', 'seotitle_en', 'seodescription_en', 'keywords_en']
           }
-        });
+        }
+      });
 
-        const text = res.text || '{}';
-        return JSON.parse(text);
-      } catch (err) {
-        console.error("translatePostAI failed:", err);
-        return fallback;
-      }
-    })();
-
-    return Promise.race([
-      callPromise,
-      new Promise<any>((resolve) => setTimeout(() => {
-        console.warn("translatePostAI timed out (3.5s), using fallback.");
-        resolve(fallback);
-      }, 3500))
-    ]);
+      const text = res.text || '{}';
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("translatePostAI failed:", err);
+      return {
+        title_en: title,
+        slug_en: (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+        content_en: content,
+        seotitle_en: seoTitle || '',
+        seodescription_en: seoDescription || '',
+        keywords_en: keywords || ''
+      };
+    }
   }
 
   async function translateProductAI(ai: any, name: string, description: string, seoarticle: string, seoTitle: string, seoDescription: string, keywords: string) {
-    const fallback = {
-      name_en: name,
-      slug_en: (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-      description_en: description,
-      seoarticle_en: seoarticle,
-      seotitle_en: seoTitle || '',
-      seodescription_en: seoDescription || '',
-      keywords_en: keywords || ''
-    };
-
-    const callPromise = (async () => {
-      try {
-        const res = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
-          contents: `You are an expert e-commerce catalog translator and professional SEO specialist.
+    try {
+      const res = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: `You are an expert e-commerce catalog translator and professional SEO specialist.
   Translate the following Indonesian product specifications, content guides, and SEO attributes into natural, elegant English.
   CRITICAL MANDATES:
   1. Preserve all HTML structures, tables, and spacing EXACTLY.
@@ -449,55 +427,45 @@ export async function createExpressApp() {
   SEO Title: "${seoTitle || ''}"
   SEO Description: "${seoDescription || ''}"
   Keywords: "${keywords || ''}"`,
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                name_en: { type: Type.STRING },
-                slug_en: { type: Type.STRING },
-                description_en: { type: Type.STRING },
-                seoarticle_en: { type: Type.STRING },
-                seotitle_en: { type: Type.STRING },
-                seodescription_en: { type: Type.STRING },
-                keywords_en: { type: Type.STRING }
-              },
-              required: ['name_en', 'slug_en', 'description_en', 'seoarticle_en', 'seotitle_en', 'seodescription_en', 'keywords_en']
-            }
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              name_en: { type: Type.STRING },
+              slug_en: { type: Type.STRING },
+              description_en: { type: Type.STRING },
+              seoarticle_en: { type: Type.STRING },
+              seotitle_en: { type: Type.STRING },
+              seodescription_en: { type: Type.STRING },
+              keywords_en: { type: Type.STRING }
+            },
+            required: ['name_en', 'slug_en', 'description_en', 'seoarticle_en', 'seotitle_en', 'seodescription_en', 'keywords_en']
           }
-        });
+        }
+      });
 
-        const text = res.text || '{}';
-        return JSON.parse(text);
-      } catch (err) {
-        console.error("translateProductAI failed:", err);
-        return fallback;
-      }
-    })();
-
-    return Promise.race([
-      callPromise,
-      new Promise<any>((resolve) => setTimeout(() => {
-        console.warn("translateProductAI timed out (3.5s), using fallback.");
-        resolve(fallback);
-      }, 3500))
-    ]);
+      const text = res.text || '{}';
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("translateProductAI failed:", err);
+      return {
+        name_en: name,
+        slug_en: (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+        description_en: description,
+        seoarticle_en: seoarticle,
+        seotitle_en: seoTitle || '',
+        seodescription_en: seoDescription || '',
+        keywords_en: keywords || ''
+      };
+    }
   }
 
   async function translatePageAI(ai: any, title: string, content: string, seoTitle: string, seoDescription: string) {
-    const fallback = {
-      title_en: title,
-      slug_en: (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-      content_en: content,
-      seotitle_en: seoTitle || '',
-      seodescription_en: seoDescription || ''
-    };
-
-    const callPromise = (async () => {
-      try {
-        const res = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
-          contents: `Translate the following Indonesian custom page content and SEO attributes into natural English.
+    try {
+      const res = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: `Translate the following Indonesian custom page content and SEO attributes into natural English.
   CRITICAL: Maintain any lists, HTML tags, and references EXACTLY as in Indonesian.
 
   ORIGINAL PAGE CONTENT:
@@ -505,37 +473,34 @@ export async function createExpressApp() {
   Content: ${content}
   SEO Title: "${seoTitle || ''}"
   SEO Description: "${seoDescription || ''}"`,
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                title_en: { type: Type.STRING },
-                slug_en: { type: Type.STRING },
-                content_en: { type: Type.STRING },
-                seotitle_en: { type: Type.STRING },
-                seodescription_en: { type: Type.STRING }
-              },
-              required: ['title_en', 'slug_en', 'content_en', 'seotitle_en', 'seodescription_en']
-            }
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title_en: { type: Type.STRING },
+              slug_en: { type: Type.STRING },
+              content_en: { type: Type.STRING },
+              seotitle_en: { type: Type.STRING },
+              seodescription_en: { type: Type.STRING }
+            },
+            required: ['title_en', 'slug_en', 'content_en', 'seotitle_en', 'seodescription_en']
           }
-        });
+        }
+      });
 
-        const text = res.text || '{}';
-        return JSON.parse(text);
-      } catch (err) {
-        console.error("translatePageAI failed:", err);
-        return fallback;
-      }
-    })();
-
-    return Promise.race([
-      callPromise,
-      new Promise<any>((resolve) => setTimeout(() => {
-        console.warn("translatePageAI timed out (3.5s), using fallback.");
-        resolve(fallback);
-      }, 3500))
-    ]);
+      const text = res.text || '{}';
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("translatePageAI failed:", err);
+      return {
+        title_en: title,
+        slug_en: (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+        content_en: content,
+        seotitle_en: seoTitle || '',
+        seodescription_en: seoDescription || ''
+      };
+    }
   }
 
   function getSlugFallback(originalSlug: string, originalTitle: string): string {
@@ -665,12 +630,7 @@ export async function createExpressApp() {
     }
   }
 
-  app.use((req, res, next) => {
-    if (req.body !== undefined) {
-      return next();
-    }
-    express.json()(req, res, next);
-  });
+  app.use(express.json());
 
   // AI Article Generator using Gemini API
   app.post('/api/posts/generate-ai', async (req, res) => {
@@ -826,47 +786,6 @@ ${text}`
   });
 
   // API Settings & Page Builder
-  function maskConnectionString(url: string | undefined): string {
-    if (!url) return 'undefined';
-    try {
-      const parsed = new URL(url);
-      if (parsed.password) parsed.password = '***';
-      return parsed.toString();
-    } catch {
-      return url.replace(/:[^:@/]+@/, ':***@');
-    }
-  }
-
-  app.get('/api/db-status', async (req, res) => {
-    const diagnostics: any = {
-      timestamp: new Date().toISOString(),
-      env: {
-        DATABASE_URL_SET: !!process.env.DATABASE_URL,
-        DATABASE_URL_MASKED: maskConnectionString(process.env.DATABASE_URL),
-        POSTGRES_URL_SET: !!process.env.POSTGRES_URL,
-        POSTGRES_URL_MASKED: maskConnectionString(process.env.POSTGRES_URL),
-        NODE_ENV: process.env.NODE_ENV
-      }
-    };
-
-    try {
-      const timeResult = await pool.query('SELECT NOW()');
-      diagnostics.connectionOk = true;
-      diagnostics.dbTime = timeResult.rows[0]?.now;
-
-      const tablesResult = await pool.query(
-        "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
-      );
-      diagnostics.tables = tablesResult.rows.map((r: any) => r.table_name);
-    } catch (err: any) {
-      diagnostics.connectionOk = false;
-      diagnostics.error = err.message;
-      diagnostics.stack = err.stack;
-    }
-
-    res.json(diagnostics);
-  });
-
   app.get('/api/settings/home', async (req, res) => {
     try {
       const { rows } = await pool.query('SELECT value FROM settings WHERE key = $1', ['home']);
@@ -1044,37 +963,13 @@ ${text}`
 
       const { rows } = await pool.query(
         'INSERT INTO posts (id, title, slug, content, seotitle, seodescription, keywords, featuredimage, site, canonical, robots, ogtitle, ogdescription, ogimage, twittercard, category, status, title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING *',
-        [
-          id,
-          b.title ?? '',
-          b.slug ?? '',
-          b.content ?? '',
-          b.seoTitle ?? b.seotitle ?? null,
-          b.seoDescription ?? b.seodescription ?? null,
-          b.keywords ?? null,
-          b.featuredImage ?? b.featuredimage ?? null,
-          b.site ?? null,
-          b.canonical ?? null,
-          b.robots ?? null,
-          b.ogtitle ?? null,
-          b.ogdescription ?? null,
-          b.ogimage ?? null,
-          b.twittercard ?? null,
-          b.category ?? null,
-          b.status || 'publish',
-          title_en ?? null,
-          slug_en ?? null,
-          content_en ?? null,
-          seotitle_en ?? null,
-          seodescription_en ?? null,
-          keywords_en ?? null
-        ]
+        [id, b.title, b.slug, b.content, b.seoTitle, b.seoDescription, b.keywords, b.featuredImage, b.site, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en]
       );
       pingSitemaps();
       res.status(201).json(rows[0]);
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      res.status(500).json({ error: `DB Error (POST /api/posts): ${e.message || e}` });
+      res.status(500).json({ error: 'DB Error' });
     }
   });
 
@@ -1120,37 +1015,13 @@ ${text}`
 
       const { rows } = await pool.query(
         'UPDATE posts SET title = $2, slug = $3, content = $4, seotitle = $5, seodescription = $6, keywords = $7, featuredimage = $8, site = $9, canonical = $10, robots = $11, ogtitle = $12, ogdescription = $13, ogimage = $14, twittercard = $15, category = $16, status = $17, title_en = $18, slug_en = $19, content_en = $20, seotitle_en = $21, seodescription_en = $22, keywords_en = $23, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-        [
-          req.params.id,
-          b.title ?? '',
-          b.slug ?? '',
-          b.content ?? '',
-          b.seoTitle ?? b.seotitle ?? null,
-          b.seoDescription ?? b.seodescription ?? null,
-          b.keywords ?? null,
-          b.featuredImage ?? b.featuredimage ?? null,
-          b.site ?? null,
-          b.canonical ?? null,
-          b.robots ?? null,
-          b.ogtitle ?? null,
-          b.ogdescription ?? null,
-          b.ogimage ?? null,
-          b.twittercard ?? null,
-          b.category ?? null,
-          b.status || 'publish',
-          title_en ?? null,
-          slug_en ?? null,
-          content_en ?? null,
-          seotitle_en ?? null,
-          seodescription_en ?? null,
-          keywords_en ?? null
-        ]
+        [req.params.id, b.title, b.slug, b.content, b.seoTitle, b.seoDescription, b.keywords, b.featuredImage, b.site, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en, keywords_en]
       );
       pingSitemaps();
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      res.status(500).json({ error: `DB Error (PUT /api/posts): ${e.message || e}` });
+      res.status(500).json({ error: 'DB Error' });
     }
   });
 
@@ -1221,28 +1092,7 @@ ${text}`
 
       const { rows } = await pool.query(
         'INSERT INTO pages (id, title, slug, content, seotitle, seodescription, image, canonical, robots, ogtitle, ogdescription, ogimage, twittercard, category, status, title_en, slug_en, content_en, seotitle_en, seodescription_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *',
-        [
-          id,
-          b.title ?? '',
-          b.slug ?? '',
-          b.content ?? '',
-          b.seoTitle ?? b.seotitle ?? null,
-          b.seoDescription ?? b.seodescription ?? null,
-          b.image ?? b.featuredImage ?? b.featuredimage ?? null,
-          b.canonical ?? null,
-          b.robots ?? null,
-          b.ogtitle ?? null,
-          b.ogdescription ?? null,
-          b.ogimage ?? null,
-          b.twittercard ?? null,
-          b.category ?? null,
-          b.status || 'publish',
-          title_en ?? null,
-          slug_en ?? null,
-          content_en ?? null,
-          seotitle_en ?? null,
-          seodescription_en ?? null
-        ]
+        [id, b.title, b.slug, b.content, b.seotitle, b.seodescription, b.image, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en]
       );
       res.status(201).json(rows[0]);
     } catch (e) {
@@ -1291,28 +1141,7 @@ ${text}`
 
       const { rows } = await pool.query(
         'UPDATE pages SET title = $2, slug = $3, content = $4, seotitle = $5, seodescription = $6, image = $7, canonical = $8, robots = $9, ogtitle = $10, ogdescription = $11, ogimage = $12, twittercard = $13, category = $14, status = $15, title_en = $16, slug_en = $17, content_en = $18, seotitle_en = $19, seodescription_en = $20, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-        [
-          req.params.id,
-          b.title ?? '',
-          b.slug ?? '',
-          b.content ?? '',
-          b.seoTitle ?? b.seotitle ?? null,
-          b.seoDescription ?? b.seodescription ?? null,
-          b.image ?? b.featuredImage ?? b.featuredimage ?? null,
-          b.canonical ?? null,
-          b.robots ?? null,
-          b.ogtitle ?? null,
-          b.ogdescription ?? null,
-          b.ogimage ?? null,
-          b.twittercard ?? null,
-          b.category ?? null,
-          b.status || 'publish',
-          title_en ?? null,
-          slug_en ?? null,
-          content_en ?? null,
-          seotitle_en ?? null,
-          seodescription_en ?? null
-        ]
+        [req.params.id, b.title, b.slug, b.content, b.seotitle, b.seodescription, b.image, b.canonical, b.robots, b.ogtitle, b.ogdescription, b.ogimage, b.twittercard, b.category, b.status || 'publish', title_en, slug_en, content_en, seotitle_en, seodescription_en]
       );
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
     } catch (e) {
@@ -1453,36 +1282,7 @@ ${text}`
 
       const { rows } = await pool.query(
         'INSERT INTO products (id, name, slug, price, category, image, gallery, description, seoarticle, seotitle, seodescription, keywords, site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, gtin, mpn, brand, condition, stock, hasvariations, variationname, variationoptions) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28) RETURNING *',
-        [
-          id,
-          b.name ?? '',
-          b.slug ?? '',
-          b.price ?? 0,
-          b.category ?? null,
-          b.image ?? null,
-          JSON.stringify(b.gallery || []),
-          b.description ?? null,
-          b.seoArticle ?? b.seoarticle ?? null,
-          b.seoTitle ?? b.seotitle ?? null,
-          b.seoDescription ?? b.seodescription ?? null,
-          b.keywords ?? null,
-          b.site ?? null,
-          name_en ?? null,
-          slug_en ?? null,
-          description_en ?? null,
-          seoarticle_en ?? null,
-          seotitle_en ?? null,
-          seodescription_en ?? null,
-          keywords_en ?? null,
-          b.gtin ?? '',
-          b.mpn ?? '',
-          b.brand ?? 'PT Panca Prima Wijaya',
-          b.condition ?? 'new',
-          b.stock !== undefined ? Number(b.stock) : 0,
-          b.hasvariations || false,
-          b.variationname ?? '',
-          b.variationoptions ?? ''
-        ]
+        [id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, b.gtin || '', b.mpn || '', b.brand || 'PT Panca Prima Wijaya', b.condition || 'new', b.stock !== undefined ? Number(b.stock) : 0, b.hasvariations || false, b.variationname || '', b.variationoptions || '']
       );
       res.status(201).json(rows[0]);
     } catch (e) {
@@ -1536,36 +1336,7 @@ ${text}`
 
       const { rows } = await pool.query(
         'UPDATE products SET name = $2, slug = $3, price = $4, category = $5, image = $6, gallery = $7, description = $8, seoarticle = $9, seotitle = $10, seodescription = $11, keywords = $12, site = $13, name_en = $14, slug_en = $15, description_en = $16, seoarticle_en = $17, seotitle_en = $18, seodescription_en = $19, keywords_en = $20, gtin = $21, mpn = $22, brand = $23, condition = $24, stock = $25, hasvariations = $26, variationname = $27, variationoptions = $28, updatedat = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-        [
-          req.params.id,
-          b.name ?? '',
-          b.slug ?? '',
-          b.price ?? 0,
-          b.category ?? null,
-          b.image ?? null,
-          JSON.stringify(b.gallery || []),
-          b.description ?? null,
-          b.seoArticle ?? b.seoarticle ?? null,
-          b.seoTitle ?? b.seotitle ?? null,
-          b.seoDescription ?? b.seodescription ?? null,
-          b.keywords ?? null,
-          b.site ?? null,
-          name_en ?? null,
-          slug_en ?? null,
-          description_en ?? null,
-          seoarticle_en ?? null,
-          seotitle_en ?? null,
-          seodescription_en ?? null,
-          keywords_en ?? null,
-          b.gtin ?? '',
-          b.mpn ?? '',
-          b.brand ?? 'PT Panca Prima Wijaya',
-          b.condition ?? 'new',
-          b.stock !== undefined ? Number(b.stock) : 0,
-          b.hasvariations || false,
-          b.variationname ?? '',
-          b.variationoptions ?? ''
-        ]
+        [req.params.id, b.name, b.slug, b.price, b.category, b.image, JSON.stringify(b.gallery || []), b.description, b.seoArticle, b.seoTitle, b.seoDescription, b.keywords, b.site, name_en, slug_en, description_en, seoarticle_en, seotitle_en, seodescription_en, keywords_en, b.gtin || '', b.mpn || '', b.brand || 'PT Panca Prima Wijaya', b.condition || 'new', b.stock !== undefined ? Number(b.stock) : 0, b.hasvariations || false, b.variationname || '', b.variationoptions || '']
       );
       rows.length ? res.json(rows[0]) : res.status(404).json({ error: 'Not found' });
     } catch (e) {
@@ -1687,6 +1458,24 @@ ${text}`
     }
   });
 
+  app.post('/api/admin/login', async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Data tidak lengkap' });
+    }
+    try {
+      const canonicalUsername = username.toLowerCase().trim();
+      const { rows } = await pool.query('SELECT id, username FROM admins WHERE LOWER(username) = $1 AND password = $2', [canonicalUsername, password]);
+      if (rows.length === 0) {
+        return res.status(400).json({ error: 'Username atau password salah.' });
+      }
+      res.json({ success: true, token: 'temporary_token_123', admin: rows[0] });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Gagal melakukan login admin' });
+    }
+  });
+
   app.post('/api/customers/update', async (req, res) => {
     const { id, name, email, password, phone, address } = req.body;
     if (!id || !email) {
@@ -1795,7 +1584,7 @@ ${text}`
       const { status, resi } = req.body;
       const { rows } = await pool.query(
         'UPDATE orders SET status = $1, resi = $2 WHERE id = $3 RETURNING *',
-        [status ?? 'Pending', resi || null, req.params.id]
+        [status, resi || null, req.params.id]
       );
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Order not found' });
@@ -1908,7 +1697,7 @@ ${text}`
       // Save order to Postgres DB
       const { rows } = await pool.query(
         'INSERT INTO orders (id, customer, items, total, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [id, JSON.stringify(b.customer || {}), JSON.stringify(b.items || []), amount, dbStatus]
+        [id, JSON.stringify(b.customer), JSON.stringify(b.items), amount, dbStatus]
       );
 
       console.log(`[PUSH NOTIF] New order ${id} logged with status: ${dbStatus}`);
@@ -2040,7 +1829,7 @@ ${text}`
       const { name, code, location, is_active } = req.body;
       const { rows } = await pool.query(
         'INSERT INTO scripts (name, code, location, is_active) VALUES ($1, $2, $3, $4) RETURNING *',
-        [name ?? '', code ?? '', location ?? 'head', is_active !== false]
+        [name, code, location, is_active !== false]
       );
       res.status(201).json(rows[0]);
     } catch (e) {
@@ -2054,7 +1843,7 @@ ${text}`
       const { name, code, location, is_active } = req.body;
       const { rows } = await pool.query(
         'UPDATE scripts SET name=$1, code=$2, location=$3, is_active=$4, updatedat=CURRENT_TIMESTAMP WHERE id=$5 RETURNING *',
-        [name ?? '', code ?? '', location ?? 'head', is_active !== false, req.params.id]
+        [name, code, location, is_active !== false, req.params.id]
       );
       res.json(rows[0]);
     } catch (e) {
@@ -2075,44 +1864,12 @@ ${text}`
 
   // Image Upload Setup
   const uploadDir = path.join(process.cwd(), 'img');
-  try {
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-  } catch (dirError: any) {
-    console.warn("Failed to create local upload directory (expected on Vercel):", dirError.message);
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
   }
   
-  // Serve the img directory statically (falls through to custom handler if not found)
+  // Serve the img directory statically
   app.use('/img', express.static(uploadDir));
-
-  // Custom route to serve uploaded images from DB if not available on local filesystem
-  app.get('/img/:filename', async (req, res) => {
-    try {
-      const { filename } = req.params;
-      
-      // Check if file exists locally first
-      const localPath = path.join(uploadDir, filename);
-      if (fs.existsSync(localPath)) {
-        return res.sendFile(localPath);
-      }
-
-      // If not, fetch from database
-      const { rows } = await pool.query('SELECT mime_type, data FROM uploaded_images WHERE filename = $1', [filename]);
-      if (rows.length > 0) {
-        const image = rows[0];
-        const buffer = Buffer.from(image.data, 'base64');
-        res.setHeader('Content-Type', image.mime_type);
-        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-        return res.send(buffer);
-      }
-
-      res.status(404).send('Not Found');
-    } catch (error) {
-      console.error('Error serving database image:', error);
-      res.status(500).send('Error serving image');
-    }
-  });
 
   const upload = multer({ storage: multer.memoryStorage() });
 
@@ -2124,80 +1881,32 @@ ${text}`
 
       const fileNameWithoutExt = path.parse(req.file.originalname).name;
       const safeFileName = fileNameWithoutExt.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const newFileName = `${safeFileName}-${Date.now()}.webp`;
+      const outputPath = path.join(uploadDir, newFileName);
 
-      let processedBuffer = req.file.buffer;
-      let mimeType = req.file.mimetype || 'image/jpeg';
-      let extension = 'jpg';
-
-      if (req.file.mimetype === 'image/png') extension = 'png';
-      else if (req.file.mimetype === 'image/webp') extension = 'webp';
-      else if (req.file.mimetype === 'image/gif') extension = 'gif';
-      else if (req.file.mimetype === 'image/svg+xml') extension = 'svg';
-
-      // Attempt optimization using sharp with fallback
-      try {
-        const sharpModule: any = await import('sharp').then(m => m.default || m);
-        processedBuffer = await sharpModule(req.file.buffer)
-          .webp({ quality: 80 })
-          .toBuffer();
-        mimeType = 'image/webp';
-        extension = 'webp';
-      } catch (sharpError: any) {
-        console.warn("Sharp optimization failed, using original file format fallback:", sharpError.message);
-      }
-
-      const newFileName = `${safeFileName}-${Date.now()}.${extension}`;
-      const base64Data = processedBuffer.toString('base64');
-
-      // Save to database
-      await pool.query(
-        'INSERT INTO uploaded_images (filename, mime_type, data) VALUES ($1, $2, $3) ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data, mime_type = EXCLUDED.mime_type',
-        [newFileName, mimeType, base64Data]
-      );
-
-      // Try writing to local disk as a secondary fallback (useful in local dev / non-serverless)
-      try {
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        const outputPath = path.join(uploadDir, newFileName);
-        await fs.promises.writeFile(outputPath, processedBuffer);
-      } catch (localWriteError: any) {
-        console.warn("Local disk write failed (expected on Vercel):", localWriteError.message);
-      }
+      await sharp(req.file.buffer)
+        .webp({ quality: 80 })
+        .toFile(outputPath);
 
       res.json({ 
         success: true, 
-        message: 'Image uploaded successfully', 
+        message: 'Image uploaded and converted to WebP', 
         url: `/img/${newFileName}` 
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error processing image:', error);
-      res.status(500).json({ error: 'Failed to process image', details: error.message });
+      res.status(500).json({ error: 'Failed to process image' });
     }
   });
 
-  app.get('/api/media', async (req, res) => {
+  app.get('/api/media', (req, res) => {
     try {
-      let localImages: string[] = [];
-      try {
-        if (fs.existsSync(uploadDir)) {
-          const files = fs.readdirSync(uploadDir);
-          localImages = files
-            .filter(f => f.endsWith('.webp') || f.endsWith('.jpg') || f.endsWith('.png') || f.endsWith('.jpeg'))
-            .map(f => `/img/${f}`);
-        }
-      } catch (localReadErr) {
-        console.warn("Could not read local media folder:", localReadErr);
+      if (!fs.existsSync(uploadDir)) {
+        return res.json([]);
       }
-
-      // Retrieve images stored in the database
-      const { rows } = await pool.query('SELECT filename FROM uploaded_images ORDER BY created_at DESC');
-      const dbImages = rows.map(r => `/img/${r.filename}`);
-
-      // Merge and remove duplicates
-      const allImages = Array.from(new Set([...dbImages, ...localImages]));
-      res.json(allImages);
+      const files = fs.readdirSync(uploadDir);
+      const images = files.filter(f => f.endsWith('.webp') || f.endsWith('.jpg') || f.endsWith('.png')).map(f => `/img/${f}`);
+      res.json(images);
     } catch (error) {
       console.error('Error reading media:', error);
       res.status(500).json({ error: 'Failed to read media' });
@@ -3349,25 +3058,15 @@ Sitemap: ${baseUrl}/sitemap.xml
     });
   }
 
-  return app;
+  if (typeof PORT === 'string' && (PORT.includes('/') || PORT.includes('\\'))) {
+    app.listen(PORT, () => {
+      console.log(`Server running on Passenger UNIX socket: ${PORT}`);
+    });
+  } else {
+    app.listen(Number(PORT), '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  }
 }
 
-if (!process.env.VERCEL) {
-  createExpressApp().then((app) => {
-    const PORT = process.env.PORT || 3000;
-    if (typeof PORT === 'string' && (PORT.includes('/') || PORT.includes('\\'))) {
-      app.listen(PORT, () => {
-        console.log("Server running on Passenger UNIX socket: " + PORT);
-      });
-    } else {
-      app.listen(Number(PORT), '0.0.0.0', () => {
-        console.log("Server running on port " + PORT);
-      });
-    }
-  }).catch((err) => {
-    console.error("Failed to start server:", err);
-  });
-}
-
-export default createExpressApp;
-
+startServer();

@@ -42,7 +42,7 @@ export default function AdminLogin() {
   const [adminPassword, setAdminPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
@@ -51,10 +51,21 @@ export default function AdminLogin() {
       return;
     }
 
-    if (adminUsername === 'admin' && adminPassword === 'admin123') {
-      localStorage.setItem('admin_token', 'temporary_token_123');
-      navigate('/admin');
-    } else {
+    try {
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: adminUsername, password: adminPassword }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        localStorage.setItem('admin_token', data.token || 'temporary_token_123');
+        navigate('/admin');
+      } else {
+        setError(data.error || t.errorAdminInvalid);
+      }
+    } catch (err) {
+      console.error(err);
       setError(t.errorAdminInvalid);
     }
   };

@@ -239,36 +239,13 @@ export default function AdminPageEdit() {
         dataToSave.status = 'publish';
     }
 
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSave)
-      });
-      
-      if (!response.ok) {
-        const bodyText = await response.text().catch(() => '');
-        let errMsg = 'Terjadi kesalahan saat menyimpan halaman.';
-        try {
-          const errJson = JSON.parse(bodyText);
-          errMsg = errJson.error || errJson.details || errJson.message || errMsg;
-        } catch {
-          if (bodyText) {
-            errMsg += ` (Detail server: ${bodyText.slice(0, 150)})`;
-          } else {
-            errMsg += ` (Status: ${response.status} ${response.statusText})`;
-          }
-        }
-        throw new Error(errMsg);
-      }
-
-      navigate('/admin/pages');
-    } catch (error: any) {
-      console.error('Submit error:', error);
-      alert('Error: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
+    await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dataToSave)
+    });
+    
+    navigate('/admin/pages');
   };
 
   return (
