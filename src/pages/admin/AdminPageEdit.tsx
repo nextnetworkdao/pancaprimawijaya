@@ -247,8 +247,19 @@ export default function AdminPageEdit() {
       });
       
       if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error || 'Terjadi kesalahan saat menyimpan halaman.');
+        const bodyText = await response.text().catch(() => '');
+        let errMsg = 'Terjadi kesalahan saat menyimpan halaman.';
+        try {
+          const errJson = JSON.parse(bodyText);
+          errMsg = errJson.error || errJson.details || errJson.message || errMsg;
+        } catch {
+          if (bodyText) {
+            errMsg += ` (Detail server: ${bodyText.slice(0, 150)})`;
+          } else {
+            errMsg += ` (Status: ${response.status} ${response.statusText})`;
+          }
+        }
+        throw new Error(errMsg);
       }
 
       navigate('/admin/pages');

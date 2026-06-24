@@ -9,8 +9,17 @@ export const config = {
 };
 
 export default async function handler(req: any, res: any) {
-  if (!appInstance) {
-    appInstance = await createExpressApp();
+  try {
+    if (!appInstance) {
+      appInstance = await createExpressApp();
+    }
+    return appInstance(req, res);
+  } catch (err: any) {
+    console.error("Vercel API handler failed to initialize Express App:", err);
+    res.status(500).json({
+      error: "Initialization Error",
+      details: err?.message || String(err),
+      stack: err?.stack
+    });
   }
-  return appInstance(req, res);
 }

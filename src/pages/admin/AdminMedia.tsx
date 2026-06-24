@@ -42,12 +42,23 @@ export default function AdminMedia() {
       if (res.ok) {
         await fetchMedia();
       } else {
-        const errData = await res.json().catch(() => ({}));
-        alert('Gagal mengupload gambar: ' + (errData.details || errData.error || 'Respons tidak dikenal dari server'));
+        const bodyText = await res.text().catch(() => '');
+        let errMsg = 'Gagal mengupload gambar: ';
+        try {
+          const errData = JSON.parse(bodyText);
+          errMsg += errData.details || errData.error || errData.message || 'Respons tidak dikenal';
+        } catch {
+          if (bodyText) {
+            errMsg += `(Detail server: ${bodyText.slice(0, 150)})`;
+          } else {
+            errMsg += `(Status: ${res.status} ${res.statusText})`;
+          }
+        }
+        alert(errMsg);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading:', error);
-      alert('Terjadi kesalahan saat mengupload gambar');
+      alert('Terjadi kesalahan saat mengupload gambar: ' + (error.message || error));
     } finally {
       setUploading(false);
       // Reset input

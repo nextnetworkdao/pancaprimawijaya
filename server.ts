@@ -3317,14 +3317,17 @@ if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 3000;
     if (typeof PORT === 'string' && (PORT.includes('/') || PORT.includes('\\'))) {
       app.listen(PORT, () => {
-        console.log(`Server running on Passenger UNIX socket: ${PORT}`);
+        console.log("Server running on Passenger UNIX socket: " + PORT);
       });
     } else {
       app.listen(Number(PORT), '0.0.0.0', () => {
-        console.log(`Server running on port ${PORT}`);
+        console.log("Server running on port " + PORT);
       });
     }
   }).catch((err) => {
     console.error("Failed to start server:", err);
   });
 }
+
+export default createExpressApp;
+
