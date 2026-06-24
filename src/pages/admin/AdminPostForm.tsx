@@ -299,13 +299,25 @@ export default function AdminPostForm() {
         dataToSave.status = 'publish';
     }
 
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dataToSave)
-    });
-    
-    navigate('/admin/posts');
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToSave)
+      });
+      
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Terjadi kesalahan saat menyimpan artikel.');
+      }
+      
+      navigate('/admin/posts');
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      alert('Error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

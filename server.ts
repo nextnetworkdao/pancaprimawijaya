@@ -341,6 +341,13 @@ export async function createExpressApp() {
       ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone VARCHAR(255);
       ALTER TABLE customers ADD COLUMN IF NOT EXISTS address TEXT;
       ALTER TABLE orders ADD COLUMN IF NOT EXISTS resi VARCHAR(255);
+
+      CREATE TABLE IF NOT EXISTS uploaded_images (
+          filename VARCHAR(255) PRIMARY KEY,
+          mime_type VARCHAR(100) NOT NULL,
+          data TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
     console.log("Database tables verified/created successfully.");
     await seedDefaultPages(pool);
@@ -1835,12 +1842,44 @@ ${text}`
 
   // Image Upload Setup
   const uploadDir = path.join(process.cwd(), 'img');
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+  try {
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+  } catch (dirError: any) {
+    console.warn("Failed to create local upload directory (expected on Vercel):", dirError.message);
   }
   
-  // Serve the img directory statically
+  // Serve the img directory statically (falls through to custom handler if not found)
   app.use('/img', express.static(uploadDir));
+
+  // Custom route to serve uploaded images from DB if not available on local filesystem
+  app.get('/img/:filename', async (req, res) => {
+    try {
+      const { filename } = req.params;
+      
+      // Check if file exists locally first
+      const localPath = path.join(uploadDir, filename);
+      if (fs.existsSync(localPath)) {
+        return res.sendFile(localPath);
+      }
+
+      // If not, fetch from database
+      const { rows } = await pool.query('SELECT mime_type, data FROM uploaded_images WHERE filename = $1', [filename]);
+      if (rows.length > 0) {
+        const image = rows[0];
+        const buffer = Buffer.from(image.data, 'base64');
+        res.setHeader('Content-Type', image.mime_type);
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        return res.send(buffer);
+      }
+
+      res.status(404).send('Not Found');
+    } catch (error) {
+      console.error('Error serving database image:', error);
+      res.status(500).send('Error serving image');
+    }
+  });
 
   const upload = multer({ storage: multer.memoryStorage() });
 
@@ -1853,15 +1892,34 @@ ${text}`
       const fileNameWithoutExt = path.parse(req.file.originalname).name;
       const safeFileName = fileNameWithoutExt.replace(/[^a-z0-9]/gi, '_').toLowerCase();
       const newFileName = `${safeFileName}-${Date.now()}.webp`;
-      const outputPath = path.join(uploadDir, newFileName);
 
-      await sharp(req.file.buffer)
+      // Convert to WebP using sharp and output to a buffer
+      const webpBuffer = await sharp(req.file.buffer)
         .webp({ quality: 80 })
-        .toFile(outputPath);
+        .toBuffer();
+
+      const base64Data = webpBuffer.toString('base64');
+
+      // Save to database
+      await pool.query(
+        'INSERT INTO uploaded_images (filename, mime_type, data) VALUES ($1, $2, $3) ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data, mime_type = EXCLUDED.mime_type',
+        [newFileName, 'image/webp', base64Data]
+      );
+
+      // Try writing to local disk as a secondary fallback (useful in local dev / non-serverless)
+      try {
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        const outputPath = path.join(uploadDir, newFileName);
+        await fs.promises.writeFile(outputPath, webpBuffer);
+      } catch (localWriteError: any) {
+        console.warn("Local disk write failed (expected on Vercel):", localWriteError.message);
+      }
 
       res.json({ 
         success: true, 
-        message: 'Image uploaded and converted to WebP', 
+        message: 'Image uploaded and saved to DB', 
         url: `/img/${newFileName}` 
       });
     } catch (error) {
@@ -1870,14 +1928,27 @@ ${text}`
     }
   });
 
-  app.get('/api/media', (req, res) => {
+  app.get('/api/media', async (req, res) => {
     try {
-      if (!fs.existsSync(uploadDir)) {
-        return res.json([]);
+      let localImages: string[] = [];
+      try {
+        if (fs.existsSync(uploadDir)) {
+          const files = fs.readdirSync(uploadDir);
+          localImages = files
+            .filter(f => f.endsWith('.webp') || f.endsWith('.jpg') || f.endsWith('.png') || f.endsWith('.jpeg'))
+            .map(f => `/img/${f}`);
+        }
+      } catch (localReadErr) {
+        console.warn("Could not read local media folder:", localReadErr);
       }
-      const files = fs.readdirSync(uploadDir);
-      const images = files.filter(f => f.endsWith('.webp') || f.endsWith('.jpg') || f.endsWith('.png')).map(f => `/img/${f}`);
-      res.json(images);
+
+      // Retrieve images stored in the database
+      const { rows } = await pool.query('SELECT filename FROM uploaded_images ORDER BY created_at DESC');
+      const dbImages = rows.map(r => `/img/${r.filename}`);
+
+      // Merge and remove duplicates
+      const allImages = Array.from(new Set([...dbImages, ...localImages]));
+      res.json(allImages);
     } catch (error) {
       console.error('Error reading media:', error);
       res.status(500).json({ error: 'Failed to read media' });

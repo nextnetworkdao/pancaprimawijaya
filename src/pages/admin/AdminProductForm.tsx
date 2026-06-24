@@ -110,13 +110,25 @@ export default function AdminProductForm() {
       variationoptions: JSON.stringify(optionsList)
     };
 
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(submissionData)
-    });
-    
-    navigate('/admin/products');
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submissionData)
+      });
+      
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Terjadi kesalahan saat menyimpan produk.');
+      }
+
+      navigate('/admin/products');
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      alert('Error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGenerateAI = async () => {
