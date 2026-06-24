@@ -350,17 +350,31 @@ export async function createExpressApp() {
     `);
     console.log("Database tables verified/created successfully.");
     await seedDefaultPages(pool);
-    runDatabaseTranslationMigration(); // Trigger the background auto-translation migration
+    if (!process.env.VERCEL) {
+      runDatabaseTranslationMigration(); // Trigger the background auto-translation migration
+    } else {
+      console.log("Running in Vercel: Background translation migration disabled to prevent serverless function timeouts.");
+    }
   } catch (err) {
     console.error("Failed to verify tables:", err);
   }
 
   // --- AUTO-TRANSLATION SERVER-SIDE HELPERS (GEMINI 3.5 FLASH) ---
   async function translatePostAI(ai: any, title: string, content: string, seoTitle: string, seoDescription: string, keywords: string) {
-    try {
-      const res = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: `You are an expert bilingual content editor and professional SEO analyst.
+    const fallback = {
+      title_en: title,
+      slug_en: (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+      content_en: content,
+      seotitle_en: seoTitle || '',
+      seodescription_en: seoDescription || '',
+      keywords_en: keywords || ''
+    };
+
+    const callPromise = (async () => {
+      try {
+        const res = await ai.models.generateContent({
+          model: 'gemini-3.5-flash',
+          contents: `You are an expert bilingual content editor and professional SEO analyst.
   Translate the following Indonesian blog post content and SEO parameters into natural, high-converting English.
   CRITICAL MANDATES:
   1. Preserve all HTML structure, inline styles, tags (e.g. figure, img, figcaption, a, inline target attributes, table, thead, tbody, etc.) EXACTLY inside the translated content. Do not drop or break any HTML element.
@@ -373,43 +387,56 @@ export async function createExpressApp() {
   SEO Title: "${seoTitle || ''}"
   SEO Description: "${seoDescription || ''}"
   Keywords: "${keywords || ''}"`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              title_en: { type: Type.STRING },
-              slug_en: { type: Type.STRING },
-              content_en: { type: Type.STRING },
-              seotitle_en: { type: Type.STRING },
-              seodescription_en: { type: Type.STRING },
-              keywords_en: { type: Type.STRING }
-            },
-            required: ['title_en', 'slug_en', 'content_en', 'seotitle_en', 'seodescription_en', 'keywords_en']
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                title_en: { type: Type.STRING },
+                slug_en: { type: Type.STRING },
+                content_en: { type: Type.STRING },
+                seotitle_en: { type: Type.STRING },
+                seodescription_en: { type: Type.STRING },
+                keywords_en: { type: Type.STRING }
+              },
+              required: ['title_en', 'slug_en', 'content_en', 'seotitle_en', 'seodescription_en', 'keywords_en']
+            }
           }
-        }
-      });
+        });
 
-      const text = res.text || '{}';
-      return JSON.parse(text);
-    } catch (err) {
-      console.error("translatePostAI failed:", err);
-      return {
-        title_en: title,
-        slug_en: (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-        content_en: content,
-        seotitle_en: seoTitle || '',
-        seodescription_en: seoDescription || '',
-        keywords_en: keywords || ''
-      };
-    }
+        const text = res.text || '{}';
+        return JSON.parse(text);
+      } catch (err) {
+        console.error("translatePostAI failed:", err);
+        return fallback;
+      }
+    })();
+
+    return Promise.race([
+      callPromise,
+      new Promise<any>((resolve) => setTimeout(() => {
+        console.warn("translatePostAI timed out (3.5s), using fallback.");
+        resolve(fallback);
+      }, 3500))
+    ]);
   }
 
   async function translateProductAI(ai: any, name: string, description: string, seoarticle: string, seoTitle: string, seoDescription: string, keywords: string) {
-    try {
-      const res = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: `You are an expert e-commerce catalog translator and professional SEO specialist.
+    const fallback = {
+      name_en: name,
+      slug_en: (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+      description_en: description,
+      seoarticle_en: seoarticle,
+      seotitle_en: seoTitle || '',
+      seodescription_en: seoDescription || '',
+      keywords_en: keywords || ''
+    };
+
+    const callPromise = (async () => {
+      try {
+        const res = await ai.models.generateContent({
+          model: 'gemini-3.5-flash',
+          contents: `You are an expert e-commerce catalog translator and professional SEO specialist.
   Translate the following Indonesian product specifications, content guides, and SEO attributes into natural, elegant English.
   CRITICAL MANDATES:
   1. Preserve all HTML structures, tables, and spacing EXACTLY.
@@ -422,45 +449,55 @@ export async function createExpressApp() {
   SEO Title: "${seoTitle || ''}"
   SEO Description: "${seoDescription || ''}"
   Keywords: "${keywords || ''}"`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              name_en: { type: Type.STRING },
-              slug_en: { type: Type.STRING },
-              description_en: { type: Type.STRING },
-              seoarticle_en: { type: Type.STRING },
-              seotitle_en: { type: Type.STRING },
-              seodescription_en: { type: Type.STRING },
-              keywords_en: { type: Type.STRING }
-            },
-            required: ['name_en', 'slug_en', 'description_en', 'seoarticle_en', 'seotitle_en', 'seodescription_en', 'keywords_en']
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                name_en: { type: Type.STRING },
+                slug_en: { type: Type.STRING },
+                description_en: { type: Type.STRING },
+                seoarticle_en: { type: Type.STRING },
+                seotitle_en: { type: Type.STRING },
+                seodescription_en: { type: Type.STRING },
+                keywords_en: { type: Type.STRING }
+              },
+              required: ['name_en', 'slug_en', 'description_en', 'seoarticle_en', 'seotitle_en', 'seodescription_en', 'keywords_en']
+            }
           }
-        }
-      });
+        });
 
-      const text = res.text || '{}';
-      return JSON.parse(text);
-    } catch (err) {
-      console.error("translateProductAI failed:", err);
-      return {
-        name_en: name,
-        slug_en: (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-        description_en: description,
-        seoarticle_en: seoarticle,
-        seotitle_en: seoTitle || '',
-        seodescription_en: seoDescription || '',
-        keywords_en: keywords || ''
-      };
-    }
+        const text = res.text || '{}';
+        return JSON.parse(text);
+      } catch (err) {
+        console.error("translateProductAI failed:", err);
+        return fallback;
+      }
+    })();
+
+    return Promise.race([
+      callPromise,
+      new Promise<any>((resolve) => setTimeout(() => {
+        console.warn("translateProductAI timed out (3.5s), using fallback.");
+        resolve(fallback);
+      }, 3500))
+    ]);
   }
 
   async function translatePageAI(ai: any, title: string, content: string, seoTitle: string, seoDescription: string) {
-    try {
-      const res = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: `Translate the following Indonesian custom page content and SEO attributes into natural English.
+    const fallback = {
+      title_en: title,
+      slug_en: (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+      content_en: content,
+      seotitle_en: seoTitle || '',
+      seodescription_en: seoDescription || ''
+    };
+
+    const callPromise = (async () => {
+      try {
+        const res = await ai.models.generateContent({
+          model: 'gemini-3.5-flash',
+          contents: `Translate the following Indonesian custom page content and SEO attributes into natural English.
   CRITICAL: Maintain any lists, HTML tags, and references EXACTLY as in Indonesian.
 
   ORIGINAL PAGE CONTENT:
@@ -468,34 +505,37 @@ export async function createExpressApp() {
   Content: ${content}
   SEO Title: "${seoTitle || ''}"
   SEO Description: "${seoDescription || ''}"`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              title_en: { type: Type.STRING },
-              slug_en: { type: Type.STRING },
-              content_en: { type: Type.STRING },
-              seotitle_en: { type: Type.STRING },
-              seodescription_en: { type: Type.STRING }
-            },
-            required: ['title_en', 'slug_en', 'content_en', 'seotitle_en', 'seodescription_en']
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                title_en: { type: Type.STRING },
+                slug_en: { type: Type.STRING },
+                content_en: { type: Type.STRING },
+                seotitle_en: { type: Type.STRING },
+                seodescription_en: { type: Type.STRING }
+              },
+              required: ['title_en', 'slug_en', 'content_en', 'seotitle_en', 'seodescription_en']
+            }
           }
-        }
-      });
+        });
 
-      const text = res.text || '{}';
-      return JSON.parse(text);
-    } catch (err) {
-      console.error("translatePageAI failed:", err);
-      return {
-        title_en: title,
-        slug_en: (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-        content_en: content,
-        seotitle_en: seoTitle || '',
-        seodescription_en: seoDescription || ''
-      };
-    }
+        const text = res.text || '{}';
+        return JSON.parse(text);
+      } catch (err) {
+        console.error("translatePageAI failed:", err);
+        return fallback;
+      }
+    })();
+
+    return Promise.race([
+      callPromise,
+      new Promise<any>((resolve) => setTimeout(() => {
+        console.warn("translatePageAI timed out (3.5s), using fallback.");
+        resolve(fallback);
+      }, 3500))
+    ]);
   }
 
   function getSlugFallback(originalSlug: string, originalTitle: string): string {
