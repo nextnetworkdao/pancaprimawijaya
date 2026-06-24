@@ -785,6 +785,16 @@ ${text}`
     }
   });
 
+  app.get('/api/db-status', async (req, res) => {
+    try {
+      await pool.query('SELECT 1');
+      res.json({ connected: true });
+    } catch (e: any) {
+      console.error('Database status check failed:', e);
+      res.json({ connected: false, error: e.message });
+    }
+  });
+
   // API Settings & Page Builder
   app.get('/api/settings/home', async (req, res) => {
     try {

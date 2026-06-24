@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { SEO } from '../../components/SEO';
 import { useLanguage } from '../../context/LanguageContext';
@@ -41,6 +41,23 @@ export default function AdminLogin() {
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [error, setError] = useState('');
+  const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+
+  useEffect(() => {
+    fetch('/api/db-status')
+      .then(res => res.json())
+      .then(data => {
+        if (data.connected) {
+          setDbStatus('connected');
+        } else {
+          setDbStatus('disconnected');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        setDbStatus('disconnected');
+      });
+  }, []);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +115,35 @@ export default function AdminLogin() {
               <span>{error}</span>
             </div>
           )}
+
+          {/* Database Connection Status Badge */}
+          <div className="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-2xl mb-4 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                {dbStatus === 'checking' && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                )}
+                {dbStatus === 'connected' && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                )}
+                {dbStatus === 'disconnected' && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                )}
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  dbStatus === 'checking' ? 'bg-yellow-500' :
+                  dbStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'
+                }`}></span>
+              </span>
+              <span className="text-gray-400 font-semibold text-[11px]">Status Database:</span>
+            </div>
+            <span className={`font-bold text-[11px] ${
+              dbStatus === 'checking' ? 'text-yellow-500' :
+              dbStatus === 'connected' ? 'text-emerald-500' : 'text-red-500'
+            }`}>
+              {dbStatus === 'checking' ? (isEn ? 'Checking...' : 'Memeriksa...') :
+               dbStatus === 'connected' ? (isEn ? 'Connected' : 'Terhubung') : (isEn ? 'Disconnected' : 'Terputus')}
+            </span>
+          </div>
 
           {/* Security Restricted Warning Banner */}
           <div className="bg-slate-900 border border-red-500/20 text-red-400 p-4 rounded-2xl mb-6 text-xs flex items-start gap-3">
