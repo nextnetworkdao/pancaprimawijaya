@@ -440,7 +440,7 @@ export default function AdminPostForm() {
           />
           <div className="text-[13px] text-[#646970] flex items-center mb-4">
             <span className="font-semibold mr-2">Tautan permanen:</span> 
-            <span className="text-[#2271b1] underline">https://website.com/blog/</span>
+            <span className="text-[#2271b1] underline">https://website.com/{formData.site || 'panca'}/blog/</span>
             <input 
               name="slug"
               value={formData.slug || ''}
@@ -518,7 +518,7 @@ export default function AdminPostForm() {
                       {formData.seoTitle || formData.title || 'Judul Pos'}
                    </div>
                    <div className="text-[12px] text-[#006621] mt-0.5 truncate" style={{ fontFamily: 'arial, sans-serif' }}>
-                      https://website.com/blog/{formData.slug || 'slug'}
+                      https://website.com/{formData.site || 'panca'}/blog/{formData.slug || 'slug'}
                    </div>
                    <div className="text-[13px] text-[#545454] mt-1 leading-snug break-words" style={{ fontFamily: 'arial, sans-serif' }}>
                       {formData.seoDescription || 'Ketikkan deskripsi meta untuk melihat pratinjau cuplikan di hasil pencarian Google.'}

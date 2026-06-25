@@ -2830,8 +2830,8 @@ ${text}`
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
     const pfx = isEn ? '/en' : '';
     try {
-      const { rows } = await pool.query('SELECT slug, slug_en FROM posts');
-      const urls = rows.map(r => `${baseUrl}${pfx}/blog/${isEn && r.slug_en ? r.slug_en : r.slug}`);
+      const { rows } = await pool.query("SELECT slug, slug_en FROM posts WHERE site = 'sensor'");
+      const urls = rows.map(r => `${baseUrl}${pfx}/sensor/blog/${isEn && r.slug_en ? r.slug_en : r.slug}`);
       res.header('Content-Type', 'application/xml');
       res.send(generateUrlset(urls));
     } catch(e) { res.status(500).send(''); }
@@ -2897,8 +2897,8 @@ ${text}`
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
     const pfx = isEn ? '/en' : '';
     try {
-      const { rows } = await pool.query('SELECT slug, slug_en FROM posts');
-      const urls = rows.map(r => `${baseUrl}${pfx}/blog/${isEn && r.slug_en ? r.slug_en : r.slug}`);
+      const { rows } = await pool.query("SELECT slug, slug_en FROM posts WHERE site = 'panca' OR site IS NULL");
+      const urls = rows.map(r => `${baseUrl}${pfx}/panca/blog/${isEn && r.slug_en ? r.slug_en : r.slug}`);
       res.header('Content-Type', 'application/xml');
       res.send(generateUrlset(urls));
     } catch(e) { res.status(500).send(''); }

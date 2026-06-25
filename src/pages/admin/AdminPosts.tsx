@@ -60,7 +60,7 @@ export default function AdminPosts() {
                     <span className="text-[#c3c4c7]">|</span>
                     <button onClick={() => handleDelete(post.id)} className="text-[#d63638] hover:underline">Buang</button>
                     <span className="text-[#c3c4c7]">|</span>
-                    <Link to={`/blog/${post.slug}`} target="_blank" className="text-[#2271b1] hover:underline">Tampil</Link>
+                    <Link to={`/${post.site || 'panca'}/blog/${post.slug}`} target="_blank" className="text-[#2271b1] hover:underline">Tampil</Link>
                   </div>
                 </td>
                 <td className="px-3 py-2 text-[13px]">Admin</td>
