@@ -170,7 +170,7 @@ async function seedDefaultPages(pool: Pool) {
   }
 }
 
-async function startServer() {
+export async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
 
@@ -3072,15 +3072,21 @@ Sitemap: ${baseUrl}/sitemap.xml
     });
   }
 
-  if (typeof PORT === 'string' && (PORT.includes('/') || PORT.includes('\\'))) {
-    app.listen(PORT, () => {
-      console.log(`Server running on Passenger UNIX socket: ${PORT}`);
-    });
-  } else {
-    app.listen(Number(PORT), '0.0.0.0', () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+  if (!process.env.VERCEL) {
+    if (typeof PORT === 'string' && (PORT.includes('/') || PORT.includes('\\'))) {
+      app.listen(PORT, () => {
+        console.log(`Server running on Passenger UNIX socket: ${PORT}`);
+      });
+    } else {
+      app.listen(Number(PORT), '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    }
   }
+
+  return app;
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}

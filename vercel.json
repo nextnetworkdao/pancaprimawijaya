@@ -1,12 +1,26 @@
 {
+  "version": 2,
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "dist/**"
+    }
+  },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/assets/(.*)",
+      "destination": "/assets/$1"
     },
     {
-      "source": "/((?!api/|img/|assets/|.*\\.txt|.*\\.xml|.*\\.xsl|.*\\.ico|.*\\.png|.*\\.jpg|.*\\.jpeg).*)",
-      "destination": "/index.html"
+      "source": "/img/(.*)",
+      "destination": "/img/$1"
+    },
+    {
+      "source": "/icon(.*).png",
+      "destination": "/icon$1.png"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.ts"
     }
   ]
 }
