@@ -6,15 +6,284 @@ import path from 'path';
 import crypto from 'crypto';
 import multer from 'multer';
 import fs from 'fs';
-import { Pool } from 'pg';
+import { Pool as PGPool } from 'pg';
+import { createClient } from '@supabase/supabase-js';
 import { GoogleGenAI, Type } from "@google/genai";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_KXPcOL8yei6r@ep-restless-waterfall-aocnkn4e-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
-});
+// Custom Supabase Client Wrapper that acts as a Pool
+class SupabasePool {
+  private pgPool: PGPool | null = null;
+  private supabase: any = null;
 
-async function seedDefaultPages(pool: Pool) {
+  constructor() {
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
+
+    if (supabaseUrl && supabaseKey) {
+      console.log(`[SupabasePool] Initializing Supabase REST API Client for URL: ${supabaseUrl}`);
+      this.supabase = createClient(supabaseUrl, supabaseKey);
+    } else {
+      console.log("[SupabasePool] Supabase credentials missing. Falling back to direct PostgreSQL pg Pool.");
+      this.pgPool = new PGPool({
+        connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_KXPcOL8yei6r@ep-restless-waterfall-aocnkn4e-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
+        ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+      });
+    }
+  }
+
+  async query(sql: string, params: any[] = []): Promise<{ rows: any[]; rowCount: number }> {
+    if (this.pgPool) {
+      return this.pgPool.query(sql, params);
+    }
+
+    const cleanSql = sql.replace(/\s+/g, ' ').trim();
+    const upperSql = cleanSql.toUpperCase();
+
+    // Safely ignore DDL and Alterations
+    if (upperSql.startsWith('CREATE') || upperSql.startsWith('ALTER') || upperSql.startsWith('DROP')) {
+      console.log(`[SupabasePool] Safely ignoring DDL statement on Supabase: ${cleanSql}`);
+      return { rows: [], rowCount: 0 };
+    }
+
+    try {
+      if (upperSql.startsWith('SELECT')) {
+        return await this.handleSelect(cleanSql, params);
+      }
+      if (upperSql.startsWith('INSERT')) {
+        return await this.handleInsert(cleanSql, params);
+      }
+      if (upperSql.startsWith('UPDATE')) {
+        return await this.handleUpdate(cleanSql, params);
+      }
+      if (upperSql.startsWith('DELETE')) {
+        return await this.handleDelete(cleanSql, params);
+      }
+      throw new Error(`Unsupported query statement: ${sql}`);
+    } catch (err: any) {
+      console.error(`[SupabasePool] Query failed: ${sql}`, err);
+      throw err;
+    }
+  }
+
+  private async handleSelect(sql: string, params: any[]): Promise<{ rows: any[]; rowCount: number }> {
+    const matchFrom = sql.match(/FROM\s+([a-zA-Z0-9_]+)/i);
+    if (!matchFrom) throw new Error(`Could not find table in SELECT query: ${sql}`);
+    const table = matchFrom[1].toLowerCase();
+
+    // AVG rating and count of product reviews
+    if (sql.toUpperCase().includes('AVG(')) {
+      const { data, error } = await this.supabase.from(table).select('*').eq('product_id', params[0]).eq('status', params[1]);
+      if (error) throw error;
+      const count = data.length;
+      const avg = count > 0 ? data.reduce((acc: number, r: any) => acc + (Number(r.rating) || 0), 0) / count : 0;
+      return { rows: [{ avg, cnt: count }], rowCount: 1 };
+    }
+
+    // Page views aggregation
+    if (sql.toUpperCase().includes('SUM(')) {
+      const { data, error } = await this.supabase.from(table).select('*');
+      if (error) throw error;
+      const sum = data.reduce((acc: number, row: any) => {
+        const val = row.pageviews !== undefined ? row.pageviews : (row.pageViews !== undefined ? row.pageViews : 0);
+        return acc + (Number(val) || 0);
+      }, 0);
+      return { rows: [{ views: sum }], rowCount: 1 };
+    }
+
+    // Counts
+    if (sql.toUpperCase().includes('COUNT(')) {
+      let builder = this.supabase.from(table).select('*');
+      if (sql.includes("site = 'sensor'")) {
+        builder = builder.eq('site', 'sensor');
+      } else if (sql.includes("site = 'panca'")) {
+        builder = builder.or("site.eq.panca,site.is.null");
+      }
+      const { data, error } = await builder;
+      if (error) throw error;
+      return { rows: [{ c: data.length }], rowCount: 1 };
+    }
+
+    // Get selected columns
+    let selectCols = '*';
+    const matchSelect = sql.match(/SELECT\s+(.*?)\s+FROM/i);
+    if (matchSelect) {
+      const colsStr = matchSelect[1].trim();
+      if (colsStr !== '*' && !colsStr.toUpperCase().includes('SUM(') && !colsStr.toUpperCase().includes('COUNT(')) {
+        selectCols = colsStr;
+      }
+    }
+
+    let builder = this.supabase.from(table).select(selectCols);
+
+    // Filter by site conditions or WHERE clause
+    const matchWhere = sql.match(/WHERE\s+(.*?)(?:\s+ORDER\s+BY|\s+LIMIT|$)/i);
+    if (matchWhere) {
+      const whereClause = matchWhere[1].trim();
+      if (whereClause.includes('OR')) {
+        const terms = whereClause.split(/\s+OR\s+/i);
+        const orParams = terms.map(term => {
+          const colMatch = term.match(/([a-zA-Z0-9_]+)\s*=/);
+          if (colMatch) {
+            const col = colMatch[1];
+            const paramMatch = term.match(/\$(\d+)/);
+            const val = paramMatch ? params[parseInt(paramMatch[1]) - 1] : null;
+            return `${col}.eq.${val}`;
+          }
+          return null;
+        }).filter(Boolean).join(',');
+        builder = builder.or(orParams);
+      } else if (whereClause.includes('AND')) {
+        const terms = whereClause.split(/\s+AND\s+/i);
+        for (const term of terms) {
+          const colMatch = term.match(/(?:LOWER\()?([a-zA-Z0-9_]+)\)?\s*=/i);
+          const paramMatch = term.match(/\$(\d+)/);
+          if (colMatch && paramMatch) {
+            const col = colMatch[1];
+            const val = params[parseInt(paramMatch[1]) - 1];
+            builder = builder.eq(col, val);
+          }
+        }
+      } else {
+        const colMatch = termColumn(whereClause);
+        const paramMatch = whereClause.match(/\$(\d+)/);
+        if (colMatch && paramMatch) {
+          const val = params[parseInt(paramMatch[1]) - 1];
+          builder = builder.eq(colMatch, val);
+        } else if (whereClause.includes("site = 'sensor'")) {
+          builder = builder.eq('site', 'sensor');
+        } else if (whereClause.includes("site = 'panca'")) {
+          builder = builder.or("site.eq.panca,site.is.null");
+        }
+      }
+    } else {
+      // Check for standalone site conditions
+      if (sql.includes("site = 'sensor'")) {
+        builder = builder.eq('site', 'sensor');
+      } else if (sql.includes("site = 'panca'")) {
+        builder = builder.or("site.eq.panca,site.is.null");
+      }
+    }
+
+    // Apply sorting
+    const matchOrderBy = sql.match(/ORDER\s+BY\s+([a-zA-Z0-9_"\s]+)/i);
+    if (matchOrderBy) {
+      const orderStr = matchOrderBy[1].replace(/"/g, '').trim();
+      const isDesc = orderStr.toLowerCase().endsWith('desc');
+      const orderCol = orderStr.split(/\s+/)[0];
+      builder = builder.order(orderCol, { ascending: !isDesc });
+    }
+
+    // Apply LIMIT
+    const matchLimit = sql.match(/LIMIT\s+(\d+)/i);
+    if (matchLimit) {
+      builder = builder.limit(parseInt(matchLimit[1]));
+    }
+
+    const { data, error } = await builder;
+    if (error) throw error;
+    return { rows: data || [], rowCount: (data || []).length };
+  }
+
+  private async handleInsert(sql: string, params: any[]): Promise<{ rows: any[]; rowCount: number }> {
+    const matchTable = sql.match(/INSERT\s+INTO\s+([a-zA-Z0-9_]+)/i);
+    if (!matchTable) throw new Error(`Could not parse table from INSERT: ${sql}`);
+    const table = matchTable[1].toLowerCase();
+
+    // Seeding admins specifically
+    if (table === 'admins' && sql.toUpperCase().includes('ON CONFLICT')) {
+      const { data, error } = await this.supabase.from('admins').upsert([
+        { username: 'admin', password: 'pancaprimasukses#123@' },
+        { username: 'ahmad', password: 'suksesbersamaa' }
+      ], { onConflict: 'username' });
+      if (error) throw error;
+      return { rows: data || [], rowCount: (data || []).length };
+    }
+
+    const matchCols = sql.match(/\((.*?)\)\s+VALUES/i);
+    if (!matchCols) throw new Error(`Could not parse columns from INSERT: ${sql}`);
+    const cols = matchCols[1].split(',').map(c => c.replace(/"/g, '').trim());
+
+    const obj: any = {};
+    cols.forEach((col, idx) => {
+      obj[col] = params[idx];
+    });
+
+    const { data, error } = await this.supabase.from(table).insert(obj).select();
+    if (error) {
+      if (sql.toUpperCase().includes('ON CONFLICT')) {
+        console.log('Ignoring ON CONFLICT error during insert:', error);
+        return { rows: [], rowCount: 0 };
+      }
+      throw error;
+    }
+    return { rows: data || [], rowCount: (data || []).length };
+  }
+
+  private async handleUpdate(sql: string, params: any[]): Promise<{ rows: any[]; rowCount: number }> {
+    const matchTable = sql.match(/UPDATE\s+([a-zA-Z0-9_]+)/i);
+    if (!matchTable) throw new Error(`Could not parse table from UPDATE: ${sql}`);
+    const table = matchTable[1].toLowerCase();
+
+    const matchSet = sql.match(/SET\s+(.*?)\s+WHERE/i);
+    if (!matchSet) throw new Error(`Could not parse SET clause from UPDATE: ${sql}`);
+    const setStr = matchSet[1];
+
+    const assignments = setStr.split(',');
+    const obj: any = {};
+    for (const assignment of assignments) {
+      const match = assignment.match(/([a-zA-Z0-9_]+)\s*=\s*\$(\d+)/);
+      if (match) {
+        const col = match[1];
+        const paramIdx = parseInt(match[2]) - 1;
+        obj[col] = params[paramIdx];
+      }
+    }
+
+    const matchWhere = sql.match(/WHERE\s+(.*?)(?:\s+RETURNING|$)/i);
+    if (!matchWhere) throw new Error(`Could not parse WHERE clause from UPDATE: ${sql}`);
+    const whereStr = matchWhere[1];
+    
+    const matchIdParam = whereStr.match(/([a-zA-Z0-9_]+)\s*=\s*\$(\d+)/);
+    if (!matchIdParam) throw new Error(`Could not parse WHERE parameter from UPDATE: ${sql}`);
+    const idCol = matchIdParam[1];
+    const idParamIdx = parseInt(matchIdParam[2]) - 1;
+    const idValue = params[idParamIdx];
+
+    const { data, error } = await this.supabase.from(table).update(obj).eq(idCol, idValue).select();
+    if (error) throw error;
+    return { rows: data || [], rowCount: (data || []).length };
+  }
+
+  private async handleDelete(sql: string, params: any[]): Promise<{ rows: any[]; rowCount: number }> {
+    const matchTable = sql.match(/DELETE\s+FROM\s+([a-zA-Z0-9_]+)/i);
+    if (!matchTable) throw new Error(`Could not parse table from DELETE: ${sql}`);
+    const table = matchTable[1].toLowerCase();
+
+    const matchWhere = sql.match(/WHERE\s+(.*?)$/i);
+    if (!matchWhere) throw new Error(`Could not parse WHERE clause from DELETE: ${sql}`);
+    const whereStr = matchWhere[1];
+
+    const matchIdParam = whereStr.match(/([a-zA-Z0-9_]+)\s*=\s*\$(\d+)/);
+    if (!matchIdParam) throw new Error(`Could not parse WHERE parameter from DELETE: ${sql}`);
+    const idCol = matchIdParam[1];
+    const idParamIdx = parseInt(matchIdParam[2]) - 1;
+    const idValue = params[idParamIdx];
+
+    const { data, error } = await this.supabase.from(table).delete().eq(idCol, idValue).select();
+    if (error) throw error;
+    return { rows: data || [], rowCount: (data || []).length };
+  }
+}
+
+function termColumn(term: string): string | null {
+  const match = term.match(/([a-zA-Z0-9_]+)\s*=/);
+  return match ? match[1] : null;
+}
+
+// Instantiate the pool
+const pool = new SupabasePool();
+
+async function seedDefaultPages(pool: any) {
   try {
     const list = [
       {
