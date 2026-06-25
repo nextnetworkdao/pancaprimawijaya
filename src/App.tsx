@@ -43,6 +43,7 @@ import AdminPages from './pages/admin/AdminPages';
 import AdminPageEdit from './pages/admin/AdminPageEdit';
 import AdminStaticPages from './pages/admin/AdminStaticPages';
 import AdminStoreManagement from './pages/admin/AdminStoreManagement';
+import AdminSEOAnalysis from './pages/admin/AdminSEOAnalysis';
 import PageDetail from './pages/public/PageDetail';
 import BmsSensorPage from './pages/public/BmsSensorPage';
 import EwsSensorPage from './pages/public/EwsSensorPage';
@@ -174,6 +175,7 @@ export default function App() {
 
                   <Route path="orders" element={<AdminOrders />} />
                   <Route path="scripts" element={<AdminScripts />} />
+                  <Route path="seo-analysis" element={<AdminSEOAnalysis />} />
                   
                   {/* Settings */}
                   <Route path="settings/*" element={<AdminSettings />} />

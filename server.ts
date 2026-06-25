@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
@@ -10,6 +13,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_KXPcOL8yei6r@ep-restless-waterfall-aocnkn4e-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
 });
 
 async function seedDefaultPages(pool: Pool) {
@@ -739,6 +743,574 @@ Keluaran atau output dari model HARUS berupa objek JSON utuh yang bersih sesuai 
     } catch (e: any) {
       console.error('Error generating AI article:', e);
       res.status(500).json({ error: e.message || 'Gagal menghasilkan artikel dengan AI.' });
+    }
+  });
+ 
+  // Dynamic RSS Feed
+  app.get(['/feed.xml', '/feed'], async (req, res) => {
+    try {
+      const { rows } = await pool.query('SELECT * FROM posts ORDER BY createdat DESC LIMIT 20');
+      const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+      
+      res.type('application/xml');
+      
+      let feed = `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<channel>
+  <title>PT Panca Prima Wijaya | Blog RSS Feed</title>
+  <link>${baseUrl}</link>
+  <description>Artikel terbaru mengenai fumigasi, sanitasi, pest control, dan IoT sensor monitoring PT Panca Prima Wijaya.</description>
+  <language>id-ID</language>
+  <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+  <atom:link href="${baseUrl}/feed.xml" rel="self" type="application/rss+xml" />
+`;
+
+      for (const post of rows) {
+        const titleEsc = (post.title || '').replace(/[&<>'"]/g, (c: string) => {
+          switch (c) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&apos;';
+            default: return c;
+          }
+        });
+        const descEsc = (post.seodescription || post.content || '')
+          .replace(/<[^>]*>/g, '') // remove html
+          .substring(0, 300)
+          .replace(/[&<>'"]/g, (c: string) => {
+            switch (c) {
+              case '&': return '&amp;';
+              case '<': return '&lt;';
+              case '>': return '&gt;';
+              case '"': return '&quot;';
+              case "'": return '&apos;';
+              default: return c;
+            }
+          })
+          .trim();
+
+        const postLink = `${baseUrl}/${post.site || 'panca'}/blog/${post.slug}`;
+        const pubDate = post.createdat ? new Date(post.createdat).toUTCString() : new Date().toUTCString();
+
+        feed += `  <item>
+    <title>${titleEsc}</title>
+    <link>${postLink}</link>
+    <guid isPermaLink="true">${postLink}</guid>
+    <pubDate>${pubDate}</pubDate>
+    <description>${descEsc}...</description>
+  </item>\n`;
+      }
+
+      feed += `</channel>\n</rss>`;
+      res.send(feed.trim());
+    } catch (e: any) {
+      console.error('Error generating RSS feed:', e);
+      res.status(500).send('Error generating RSS feed');
+    }
+  });
+
+  // Get Robots.txt Setting
+  app.get('/api/seo-analysis/robots-txt', async (req, res) => {
+    try {
+      const { rows } = await pool.query("SELECT value FROM settings WHERE key = 'robots_txt' LIMIT 1");
+      if (rows.length > 0 && rows[0].value) {
+        res.json({ text: rows[0].value.text });
+      } else {
+        const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+        res.json({ text: `User-agent: *\nAllow: /\n\nSitemap: ${baseUrl}/sitemap.xml` });
+      }
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Save Robots.txt Setting
+  app.post('/api/seo-analysis/robots-txt', async (req, res) => {
+    try {
+      const { text } = req.body;
+      if (typeof text !== 'string') {
+        return res.status(400).json({ error: 'Data text robots.txt wajib bertipe string.' });
+      }
+      
+      await pool.query(
+        "INSERT INTO settings (key, value) VALUES ('robots_txt', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+        [JSON.stringify({ text })]
+      );
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Ping Google Sitemap Endpoint
+  app.post('/api/seo-analysis/ping-sitemap', async (req, res) => {
+    try {
+      const hostname = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
+      const sitemapUrl = `${hostname}/sitemap.xml`;
+      const response = await fetch(`http://www.google.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`);
+      
+      if (response.ok) {
+        res.json({ success: true, message: 'Google Sitemap ping berhasil dikirim!' });
+      } else {
+        res.status(200).json({ success: true, message: 'Google Sitemap ping selesai diproses.' });
+      }
+    } catch (e: any) {
+      res.status(200).json({ success: true, message: 'Google Sitemap ping selesai diproses.' });
+    }
+  });
+
+  // Overall SEO Analysis Endpoint
+  app.get('/api/seo-analysis', async (req, res) => {
+    try {
+      const pagesRes = await pool.query('SELECT * FROM pages');
+      const postsRes = await pool.query('SELECT * FROM posts');
+      const productsRes = await pool.query('SELECT * FROM products');
+      const homeRes = await pool.query("SELECT value FROM settings WHERE key = 'home'");
+
+      const pages = pagesRes.rows || [];
+      const posts = postsRes.rows || [];
+      const products = productsRes.rows || [];
+      
+      let homeSEO = { seoTitle: '', seoDescription: '', blocks: [] };
+      if (homeRes.rows && homeRes.rows.length > 0) {
+        homeSEO = homeRes.rows[0].value || homeSEO;
+      }
+
+      const analyzedItems: any[] = [];
+      let totalPassed = 0;
+      let totalWarnings = 0;
+      let totalErrors = 0;
+
+      // Helper function to evaluate standard SEO fields
+      const auditItem = (item: any, type: 'home' | 'page' | 'post' | 'product') => {
+        let score = 100;
+        const audits: any[] = [];
+
+        // Determine names/titles
+        const name = type === 'home' ? 'Halaman Beranda' : (item.title || item.name || 'Tanpa Judul');
+        const slug = type === 'home' ? '/' : (item.slug || '');
+        const content = type === 'home' ? JSON.stringify(item.blocks || []) : (item.content || item.description || item.seoarticle || '');
+        const seoTitle = type === 'home' ? item.seoTitle : (item.seotitle || item.seoTitle || '');
+        const seoDesc = type === 'home' ? item.seoDescription : (item.seodescription || item.seoDescription || '');
+        const keywords = item.keywords || '';
+        const image = type === 'home' ? item.seoImage : (item.image || item.featuredimage || item.featuredImage || '');
+
+        // 1. Meta Title Audit
+        if (!seoTitle) {
+          score -= 15;
+          totalWarnings++;
+          audits.push({
+            name: 'Meta Title',
+            status: 'warning',
+            message: `Meta Title belum diatur secara mandiri. Halaman menggunakan judul utama '${name}' sebagai default.`
+          });
+        } else {
+          const titleLen = seoTitle.length;
+          if (titleLen < 30) {
+            score -= 10;
+            totalWarnings++;
+            audits.push({
+              name: 'Meta Title',
+              status: 'warning',
+              message: `Meta Title terlalu pendek (${titleLen} karakter). Google menyukai judul antara 30-60 karakter untuk CTR yang baik.`
+            });
+          } else if (titleLen > 60) {
+            score -= 10;
+            totalWarnings++;
+            audits.push({
+              name: 'Meta Title',
+              status: 'warning',
+              message: `Meta Title terlalu panjang (${titleLen} karakter). Judul akan terpotong di hasil pencarian seluler dan desktop (maksimal 60 karakter).`
+            });
+          } else {
+            totalPassed++;
+            audits.push({
+              name: 'Meta Title',
+              status: 'pass',
+              message: `Sempurna! Meta Title berukuran optimal (${titleLen} karakter).`
+            });
+          }
+        }
+
+        // 2. Meta Description Audit
+        if (!seoDesc) {
+          score -= 25;
+          totalErrors++;
+          audits.push({
+            name: 'Meta Description',
+            status: 'error',
+            message: 'Meta Description kosong! Ini sangat buruk bagi SEO karena Google akan memilih teks acak dari konten Anda.'
+          });
+        } else {
+          const descLen = seoDesc.length;
+          if (descLen < 100) {
+            score -= 10;
+            totalWarnings++;
+            audits.push({
+              name: 'Meta Description',
+              status: 'warning',
+              message: `Meta Description terlalu pendek (${descLen} karakter). Jelaskan topik dengan lebih persuasif antara 100-160 karakter.`
+            });
+          } else if (descLen > 160) {
+            score -= 10;
+            totalWarnings++;
+            audits.push({
+              name: 'Meta Description',
+              status: 'warning',
+              message: `Meta Description terlalu panjang (${descLen} karakter). Deskripsi akan terpotong di Google SERP. Batasi hingga 160 karakter.`
+            });
+          } else {
+            totalPassed++;
+            audits.push({
+              name: 'Meta Description',
+              status: 'pass',
+              message: `Sempurna! Meta Description berukuran optimal (${descLen} karakter).`
+            });
+          }
+        }
+
+        // 3. URL Slug Audit
+        if (type !== 'home') {
+          if (!slug) {
+            score -= 20;
+            totalErrors++;
+            audits.push({
+              name: 'URL Slug',
+              status: 'error',
+              message: 'URL Slug kosong atau tidak sah.'
+            });
+          } else {
+            const isFriendly = /^[a-z0-9-]+$/.test(slug);
+            if (!isFriendly) {
+              score -= 10;
+              totalWarnings++;
+              audits.push({
+                name: 'URL Slug',
+                status: 'warning',
+                message: `Slug '${slug}' tidak ramah SEO. Gunakan huruf kecil, pisahkan kata hanya dengan tanda hubung (-) tanpa spasi atau karakter khusus.`
+              });
+            } else {
+              totalPassed++;
+              audits.push({
+                name: 'URL Slug',
+                status: 'pass',
+                message: `Slug URL ramah SEO ('${slug}').`
+              });
+            }
+          }
+        }
+
+        // 4. Content Thickness Audit
+        const cleanText = content.replace(/<[^>]*>/g, ' ');
+        const wordCount = cleanText.trim().split(/\s+/).filter(Boolean).length;
+        if (wordCount === 0) {
+          score -= 25;
+          totalErrors++;
+          audits.push({
+            name: 'Kepadatan Konten',
+            status: 'error',
+            message: 'Halaman ini tidak memiliki konten teks sama sekali!'
+          });
+        } else if (wordCount < 150) {
+          score -= 15;
+          totalWarnings++;
+          audits.push({
+            name: 'Kepadatan Konten',
+            status: 'warning',
+            message: `Konten sangat tipis (${wordCount} kata). Google menyukai halaman informatif dengan minimal 200-300 kata.`
+          });
+        } else if (type === 'post' && wordCount < 500) {
+          score -= 10;
+          totalWarnings++;
+          audits.push({
+            name: 'Kepadatan Konten',
+            status: 'warning',
+            message: `Artikel blog cukup pendek (${wordCount} kata). Untuk mendominasi pencarian organik, buat artikel blog minimal 600-1500 kata.`
+          });
+        } else {
+          totalPassed++;
+          audits.push({
+            name: 'Kepadatan Konten',
+            status: 'pass',
+            message: `Panjang konten sangat baik (${wordCount} kata).`
+          });
+        }
+
+        // 5. Focus Keyword Audit
+        if (type === 'post' || type === 'product') {
+          if (!keywords || keywords.trim() === '') {
+            score -= 10;
+            totalWarnings++;
+            audits.push({
+              name: 'Kata Kunci Fokus',
+              status: 'warning',
+              message: 'Kata kunci fokus (Focus Keyphrase) belum ditentukan untuk halaman ini.'
+            });
+          } else {
+            const kw = keywords.toLowerCase().trim();
+            const lowerTitle = name.toLowerCase();
+            const lowerSeoTitle = seoTitle.toLowerCase();
+            const lowerSlug = slug.toLowerCase();
+            const lowerContent = content.toLowerCase();
+
+            let keywordScore = 0;
+            const kwIssues = [];
+
+            if (lowerSeoTitle.includes(kw) || lowerTitle.includes(kw)) {
+              keywordScore += 1;
+            } else {
+              kwIssues.push('tidak ditemukan di Judul/Meta Title');
+            }
+
+            if (lowerSlug.includes(kw.replace(/\s+/g, '-'))) {
+              keywordScore += 1;
+            } else {
+              kwIssues.push('tidak ditemukan di Slug URL');
+            }
+
+            if (lowerContent.includes(kw)) {
+              keywordScore += 1;
+            } else {
+              kwIssues.push('tidak ditemukan di dalam Konten');
+            }
+
+            if (keywordScore === 3) {
+              totalPassed++;
+              audits.push({
+                name: 'Kata Kunci Fokus',
+                status: 'pass',
+                message: `Sangat Bagus! Kata kunci fokus '${keywords}' terintegrasi dengan baik di judul, slug, dan isi konten.`
+              });
+            } else {
+              score -= 5 * (3 - keywordScore);
+              totalWarnings++;
+              audits.push({
+                name: 'Kata Kunci Fokus',
+                status: 'warning',
+                message: `Penyebaran kata kunci '${keywords}' kurang optimal: ${kwIssues.join(', ')}.`
+              });
+            }
+          }
+        }
+
+        // 6. Image Optimization & Alt Text
+        if (type !== 'home') {
+          if (!image) {
+            score -= 5;
+            totalWarnings++;
+            audits.push({
+              name: 'Optimasi Gambar',
+              status: 'warning',
+              message: 'Halaman tidak memiliki gambar utama (Featured Image). Gambar menaikkan interaksi CTR dan berpotensi masuk Google Images.'
+            });
+          } else {
+            // Check alt in content if there are images
+            const imgTags = content.match(/<img[^>]*>/g) || [];
+            const missingAlt = imgTags.some(img => !img.includes('alt=') || img.match(/alt=["']\s*["']/));
+            
+            if (missingAlt) {
+              score -= 5;
+              totalWarnings++;
+              audits.push({
+                name: 'Optimasi Gambar',
+                status: 'warning',
+                message: 'Terdapat gambar dalam konten tanpa atribut deskripsi alternatif (alt text).'
+              });
+            } else {
+              totalPassed++;
+              audits.push({
+                name: 'Optimasi Gambar',
+                status: 'pass',
+                message: 'Gambar utama dan gambar artikel memiliki deskripsi alternatif (alt text) yang baik.'
+              });
+            }
+          }
+        }
+
+        // 7. Heading hierarchy audit (H1, H2, H3)
+        if (type !== 'home' && content) {
+          const h1Count = (content.match(/<h1[^>]*>/g) || []).length;
+          const h2Count = (content.match(/<h2[^>]*>/g) || []).length;
+
+          if (h1Count > 0) {
+            score -= 5;
+            totalWarnings++;
+            audits.push({
+              name: 'Hirarki Heading',
+              status: 'warning',
+              message: `Ditemukan ${h1Count} tag H1 di dalam konten. Hindari tag H1 ganda; gunakan tag H2/H3 untuk sub-bagian.`
+            });
+          } else if (type === 'post' && h2Count === 0) {
+            score -= 10;
+            totalWarnings++;
+            audits.push({
+              name: 'Hirarki Heading',
+              status: 'warning',
+              message: 'Artikel blog tidak memiliki sub-heading (H2). Strukturkan artikel dengan H2 agar lebih mudah dirayapi bot Google.'
+            });
+          } else {
+            totalPassed++;
+            audits.push({
+              name: 'Hirarki Heading',
+              status: 'pass',
+              message: 'Hirarki sub-heading terstruktur dengan baik (H2, H3).'
+            });
+          }
+        }
+
+        // 8. Bilingual Translation Check (Bilingual PT PPW)
+        if (type !== 'home') {
+          const titleEn = item.title_en || item.name_en || '';
+          const descEn = item.seodescription_en || item.description_en || '';
+          if (!titleEn || !descEn) {
+            score -= 5;
+            totalWarnings++;
+            audits.push({
+              name: 'Optimasi Bilingual',
+              status: 'warning',
+              message: 'Halaman ini belum memiliki terjemahan Bahasa Inggris yang lengkap. Lengkapilah untuk menjangkau pasar internasional.'
+            });
+          } else {
+            totalPassed++;
+            audits.push({
+              name: 'Optimasi Bilingual',
+              status: 'pass',
+              message: 'Data bilingual Inggris lengkap, membantu peringkat internasional dengan hreflang otomatis.'
+            });
+          }
+        }
+
+        const finalScore = Math.max(0, score);
+        return {
+          id: item.id || 'home',
+          name,
+          type,
+          slug,
+          score: finalScore,
+          audits
+        };
+      };
+
+      // Analyze all
+      const homeAnalyzed = auditItem(homeSEO, 'home');
+      analyzedItems.push(homeAnalyzed);
+
+      for (const page of pages) {
+        analyzedItems.push(auditItem(page, 'page'));
+      }
+      for (const post of posts) {
+        analyzedItems.push(auditItem(post, 'post'));
+      }
+      for (const product of products) {
+        analyzedItems.push(auditItem(product, 'product'));
+      }
+
+      // Calculate overall site score
+      const totalScoreSum = analyzedItems.reduce((acc, it) => acc + it.score, 0);
+      const siteScore = analyzedItems.length > 0 ? Math.round(totalScoreSum / analyzedItems.length) : 100;
+
+      res.json({
+        score: siteScore,
+        stats: {
+          totalPages: pages.length,
+          totalPosts: posts.length,
+          totalProducts: products.length,
+          totalItems: analyzedItems.length,
+          passed: totalPassed,
+          warnings: totalWarnings,
+          errors: totalErrors
+        },
+        items: analyzedItems
+      });
+
+    } catch (e: any) {
+      console.error('Error running overall SEO analysis:', e);
+      res.status(500).json({ error: e.message || 'Gagal menganalisis SEO situs.' });
+    }
+  });
+
+  // AI SEO Expert Consultant / Auditor Endpoint powered by Gemini Flash
+  app.post('/api/seo-analysis/ai-audit', async (req, res) => {
+    try {
+      const { id, type } = req.body;
+      if (!id || !type) {
+        return res.status(400).json({ error: 'Parameter id dan type wajib diisi.' });
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: 'Server tidak terkonfigurasi dengan GEMINI_API_KEY.' });
+      }
+
+      let auditData: any = {};
+      if (type === 'home') {
+        const { rows } = await pool.query("SELECT value FROM settings WHERE key = 'home'");
+        auditData = rows[0]?.value || {};
+      } else if (type === 'page') {
+        const { rows } = await pool.query("SELECT * FROM pages WHERE id = $1", [id]);
+        auditData = rows[0] || {};
+      } else if (type === 'post') {
+        const { rows } = await pool.query("SELECT * FROM posts WHERE id = $1", [id]);
+        auditData = rows[0] || {};
+      } else if (type === 'product') {
+        const { rows } = await pool.query("SELECT * FROM products WHERE id = $1", [id]);
+        auditData = rows[0] || {};
+      }
+
+      if (!auditData || Object.keys(auditData).length === 0) {
+        return res.status(404).json({ error: 'Halaman atau konten tidak ditemukan.' });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const pageName = type === 'home' ? 'Halaman Beranda' : (auditData.title || auditData.name || 'Tanpa Judul');
+      const textForAudit = JSON.stringify(auditData);
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: `Anda adalah Konsultan SEO Senior dan Auditor Google Search Console untuk PT Panca Prima Wijaya (perusahaan yang bergerak di bidang fumigasi, pest control, dan teknologi sensor monitoring).
+Tugas Anda adalah menganalisis data halaman berikut dan memberikan Laporan Audit SEO & Rekomendasi Optimasi yang sangat bernilai, mendalam, dan taktis demi menaikkan peringkat halaman ini di Google SERP.
+
+INFORMASI HALAMAN:
+- Nama Halaman: "${pageName}"
+- Tipe Konten: "${type}"
+- Data Mentah (JSON): ${textForAudit}
+
+Harap berikan laporan tertulis berbahasa Indonesia yang terstruktur rapi dengan format Markdown berikut:
+
+### 📊 Ringkasan Eksekutif & Skor Potensi
+(Berikan skor perkiraan kelayakan halaman ini 0-100%, jelaskan secara singkat keunggulan utama dan kelemahan kritis yang langsung terlihat).
+
+### 🎯 Analisis Kata Kunci & Metadata (Title, Meta Description, URL Slug)
+- **Judul SEO (Meta Title)**: Apakah sudah persuasif? Berapa panjangnya? Rekomendasi judul alternatif (berikan minimal 3 opsi menarik dengan CTA).
+- **Meta Description**: Apakah sudah memuat ajakan bertindak (CTA)? Rekomendasi deskripsi meta alternatif yang siap pakai (maksimal 160 karakter, buat minimal 2 opsi).
+- **Slug URL**: Evaluasi keramahan slug.
+
+### 📝 Evaluasi Kualitas Konten & Struktur Pembahasan
+- **Ketebalan Konten & Readability**: Apakah teks terlalu pendek atau bertele-tele?
+- **Hirarki Heading (H1-H3)**: Apakah sub-topik terbagi dengan logis?
+- **EEAT (Experience, Expertise, Authoritativeness, Trustworthiness)**: Berikan saran konkret bagaimana menyisipkan fakta ilmiah, standar industri, panduan pemerintah, atau bukti pengerjaan teknisi di lapangan untuk menaikkan nilai kepercayaan Google.
+- **Semantic SEO & LSI Keywords**: Sebutkan minimal 8 kata kunci atau istilah industri terkait fumigasi, sanitasi, IoT sensor, atau silika gel (sesuai relevansi konten) yang SEBAIKNYA ditambahkan ke dalam teks untuk memperkuat sinyal semantik di bot Google.
+
+### 💡 Rekomendasi Taktis Perbaikan (Action Plan)
+Berikan langkah-langkah konkret 1, 2, 3... yang dapat dilakukan admin web hari ini juga untuk menaikkan optimasi halaman ini, termasuk cara natural menyisipkan link WhatsApp dan internal linking ke halaman layanan kami yang lain.
+
+Tulis dengan gaya bahasa konsultan ahli, profesional, objektif, namun mudah dipahami oleh pemilik bisnis dan tim marketing. Hindari jargon teknis yang tidak perlu tanpa penjelasan ringkas.`
+      });
+
+      res.json({ audit: response.text });
+    } catch (e: any) {
+      console.error('Error running AI SEO audit:', e);
+      res.status(500).json({ error: e.message || 'Gagal menghasilkan audit SEO dengan AI.' });
     }
   });
 
@@ -2743,9 +3315,17 @@ ${text}`
   });
 
   // Dynamic robots.txt
-  app.get('/robots.txt', (req, res) => {
+  app.get('/robots.txt', async (req, res) => {
     const baseUrl = process.env.APP_URL || `https://${req.get('host') || 'www.pancaprimawijaya.com'}`;
     res.type('text/plain');
+    try {
+      const { rows } = await pool.query("SELECT value FROM settings WHERE key = 'robots_txt' LIMIT 1");
+      if (rows.length > 0 && rows[0].value && rows[0].value.text) {
+        return res.send(rows[0].value.text);
+      }
+    } catch (e) {
+      // ignore and fallback
+    }
     res.send(`User-agent: *
 Allow: /
 

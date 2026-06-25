@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, ShoppingBag, Settings, LogOut, Activity, LayoutTemplate, Box, Home, ChevronRight, ChevronDown, Image as ImageIcon, Code, Menu, X, Store } from 'lucide-react';
+import { LayoutDashboard, FileText, ShoppingBag, Settings, LogOut, Activity, LayoutTemplate, Box, Home, ChevronRight, ChevronDown, Image as ImageIcon, Code, Menu, X, Store, TrendingUp } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { SEO } from '../components/SEO';
 
@@ -37,6 +37,7 @@ export function AdminLayout() {
   const navItemsAfter = [
     { name: 'Pesanan', href: '/admin/orders', icon: ShoppingBag },
     { name: 'Insert Script', href: '/admin/scripts', icon: Code },
+    { name: 'Analisa SEO', href: '/admin/seo-analysis', icon: TrendingUp },
   ];
 
   const storeSubItems = [
