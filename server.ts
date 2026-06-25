@@ -10,11 +10,22 @@ import sharp from 'sharp';
 import fs from 'fs';
 import { Pool } from 'pg';
 import { GoogleGenAI, Type } from "@google/genai";
+import ImageKit from 'imagekit';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_KXPcOL8yei6r@ep-restless-waterfall-aocnkn4e-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
 });
+
+// Initialize ImageKit if keys are present
+let imagekit: ImageKit | null = null;
+if (process.env.IMAGEKIT_PUBLIC_KEY && process.env.IMAGEKIT_PRIVATE_KEY && process.env.IMAGEKIT_URL_ENDPOINT) {
+  imagekit = new ImageKit({
+    publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+    privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+    urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT
+  });
+}
 
 async function seedDefaultPages(pool: Pool) {
   try {
@@ -2464,15 +2475,33 @@ ${text}`
       const fileNameWithoutExt = path.parse(req.file.originalname).name;
       const safeFileName = fileNameWithoutExt.replace(/[^a-z0-9]/gi, '_').toLowerCase();
       const newFileName = `${safeFileName}-${Date.now()}.webp`;
-      const outputPath = path.join(uploadDir, newFileName);
 
-      await sharp(req.file.buffer)
+      // Convert buffer to WebP first
+      const webpBuffer = await sharp(req.file.buffer)
         .webp({ quality: 80 })
-        .toFile(outputPath);
+        .toBuffer();
+
+      // If ImageKit is configured, upload to ImageKit
+      if (imagekit) {
+        const response = await imagekit.upload({
+          file: webpBuffer,
+          fileName: newFileName,
+          folder: '/pancaprima_uploads'
+        });
+        return res.json({ 
+          success: true, 
+          message: 'Image uploaded to ImageKit successfully', 
+          url: response.url 
+        });
+      }
+
+      // Otherwise fallback to local disk storage
+      const outputPath = path.join(uploadDir, newFileName);
+      fs.writeFileSync(outputPath, webpBuffer);
 
       res.json({ 
         success: true, 
-        message: 'Image uploaded and converted to WebP', 
+        message: 'Image uploaded locally and converted to WebP', 
         url: `/img/${newFileName}` 
       });
     } catch (error) {
@@ -2481,8 +2510,21 @@ ${text}`
     }
   });
 
-  app.get('/api/media', (req, res) => {
+  app.get('/api/media', async (req, res) => {
     try {
+      // If ImageKit is configured, list files from ImageKit
+      if (imagekit) {
+        const files = await imagekit.listFiles({
+          path: '/pancaprima_uploads',
+          limit: 100
+        });
+        const urls = files
+          .filter(f => f.type === 'file')
+          .map(f => (f as any).url);
+        return res.json(urls);
+      }
+
+      // Otherwise fallback to local disk storage list
       if (!fs.existsSync(uploadDir)) {
         return res.json([]);
       }
