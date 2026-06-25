@@ -4,9 +4,7 @@ dotenv.config();
 import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
-import { createServer as createViteServer } from 'vite';
 import multer from 'multer';
-import sharp from 'sharp';
 import fs from 'fs';
 import { Pool } from 'pg';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -1898,9 +1896,22 @@ ${text}`
       const newFileName = `${safeFileName}-${Date.now()}.webp`;
       const outputPath = path.join(uploadDir, newFileName);
 
-      await sharp(req.file.buffer)
-        .webp({ quality: 80 })
-        .toFile(outputPath);
+      let sharp: any = null;
+      try {
+        const sharpModule = await import('sharp');
+        sharp = sharpModule.default || sharpModule;
+      } catch (e) {
+        console.warn('Sharp was not loaded, falling back to direct write:', e);
+      }
+
+      if (sharp) {
+        await sharp(req.file.buffer)
+          .webp({ quality: 80 })
+          .toFile(outputPath);
+      } else {
+        // Fallback: save file directly without webp compression
+        fs.writeFileSync(outputPath, req.file.buffer);
+      }
 
       res.json({ 
         success: true, 
@@ -2763,7 +2774,8 @@ Sitemap: ${baseUrl}/sitemap.xml
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
