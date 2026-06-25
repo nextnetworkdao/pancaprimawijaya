@@ -42,7 +42,6 @@ export default function AdminLogin() {
   const [adminPassword, setAdminPassword] = useState('');
   const [error, setError] = useState('');
   const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
-  const [dbError, setDbError] = useState('');
 
   useEffect(() => {
     fetch('/api/db-status')
@@ -52,15 +51,11 @@ export default function AdminLogin() {
           setDbStatus('connected');
         } else {
           setDbStatus('disconnected');
-          if (data.error) {
-            setDbError(data.error);
-          }
         }
       })
       .catch(err => {
         console.error(err);
         setDbStatus('disconnected');
-        setDbError(err.message || 'Network fetch failed');
       });
   }, []);
 
@@ -122,40 +117,32 @@ export default function AdminLogin() {
           )}
 
           {/* Database Connection Status Badge */}
-          <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl mb-4 text-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  {dbStatus === 'checking' && (
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                  )}
-                  {dbStatus === 'connected' && (
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  )}
-                  {dbStatus === 'disconnected' && (
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  )}
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                    dbStatus === 'checking' ? 'bg-yellow-500' :
-                    dbStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'
-                  }`}></span>
-                </span>
-                <span className="text-gray-400 font-semibold text-[11px]">Status Database:</span>
-              </div>
-              <span className={`font-bold text-[11px] ${
-                dbStatus === 'checking' ? 'text-yellow-500' :
-                dbStatus === 'connected' ? 'text-emerald-500' : 'text-red-500'
-              }`}>
-                {dbStatus === 'checking' ? (isEn ? 'Checking...' : 'Memeriksa...') :
-                 dbStatus === 'connected' ? (isEn ? 'Connected' : 'Terhubung') : (isEn ? 'Disconnected' : 'Terputus')}
+          <div className="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-2xl mb-4 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                {dbStatus === 'checking' && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                )}
+                {dbStatus === 'connected' && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                )}
+                {dbStatus === 'disconnected' && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                )}
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  dbStatus === 'checking' ? 'bg-yellow-500' :
+                  dbStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'
+                }`}></span>
               </span>
+              <span className="text-gray-400 font-semibold text-[11px]">Status Database:</span>
             </div>
-            {dbStatus === 'disconnected' && dbError && (
-              <div className="mt-2 text-[10px] text-red-400 bg-red-950/20 p-2 rounded-lg border border-red-900/40 font-mono break-all leading-relaxed">
-                <span className="font-sans font-bold text-red-500 block mb-0.5">DB Error:</span>
-                {dbError}
-              </div>
-            )}
+            <span className={`font-bold text-[11px] ${
+              dbStatus === 'checking' ? 'text-yellow-500' :
+              dbStatus === 'connected' ? 'text-emerald-500' : 'text-red-500'
+            }`}>
+              {dbStatus === 'checking' ? (isEn ? 'Checking...' : 'Memeriksa...') :
+               dbStatus === 'connected' ? (isEn ? 'Connected' : 'Terhubung') : (isEn ? 'Disconnected' : 'Terputus')}
+            </span>
           </div>
 
           {/* Security Restricted Warning Banner */}
